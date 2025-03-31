@@ -1,19 +1,28 @@
 import fs from "fs";
 import path from "path";
 import PDFDocument from "pdfkit";
-import { Search } from "@shared/schema";
+import { Search, Organization } from "@shared/schema";
 import { format } from "date-fns";
+import { storage } from "./storage";
 
 export async function createPDF(search: Search): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
+      // Get organization settings if the user is part of an organization
+      let organization: Organization | undefined;
+      const user = await storage.getUser(search.userId);
+      
+      if (user && user.organizationId) {
+        organization = await storage.getOrganizationById(user.organizationId);
+      }
+      
       // Create a document
       const doc = new PDFDocument({
         size: "A4",
         margin: 50,
         info: {
           Title: `Zoekopdracht ${search.id}`,
-          Author: "CarSearch Pro",
+          Author: organization?.pdfCompanyName || "CarSearch Pro",
         },
       });
 
@@ -28,12 +37,14 @@ export async function createPDF(search: Search): Promise<Buffer> {
       // Add metadata
       doc.info.CreationDate = new Date();
 
-      // Styling variables
-      const primaryColor = "#4a6da7";
-      const textColor = "#333333";
+      // Styling variables - Use organization settings if available
+      const primaryColor = organization?.pdfPrimaryColor || "#4a6da7";
+      const textColor = organization?.pdfSecondaryColor || "#333333";
       const lightGray = "#f3f4f6";
       const mediumGray = "#e5e7eb";
       const darkGray = "#9ca3af";
+      const companyName = organization?.pdfCompanyName || "CarSearch Pro";
+      const contactInfo = organization?.pdfContactInfo || "Tel: 020-123456 | info@carsearchpro.nl | www.carsearchpro.nl";
 
       // Company Logo and Title
       doc.rect(50, 50, 495, 80)
@@ -42,7 +53,7 @@ export async function createPDF(search: Search): Promise<Buffer> {
       doc.fillColor(primaryColor)
         .fontSize(24)
         .font('Helvetica-Bold')
-        .text("CarSearch Pro", 180, 65);
+        .text(companyName, 180, 65);
       
       doc.fillColor(textColor)
         .fontSize(14)
@@ -53,14 +64,40 @@ export async function createPDF(search: Search): Promise<Buffer> {
         .fontSize(10)
         .text(`Datum: ${format(new Date(search.createdAt), "dd MMMM yyyy")}`, 380, 95);
 
-      // Draw a rectangle for the "LOGO" placeholder
-      doc.rect(60, 60, 100, 60)
-        .fillAndStroke(primaryColor, primaryColor);
+      // Helper function to draw logo placeholder - defined outside of the if blocks
+      const drawLogoPlaceholder = () => {
+        doc.rect(60, 60, 100, 60)
+          .fillAndStroke(primaryColor, primaryColor);
+        
+        doc.fillColor("white")
+          .fontSize(16)
+          .font('Helvetica-Bold')
+          .text("LOGO", 90, 80);
+      };
       
-      doc.fillColor("white")
-        .fontSize(16)
-        .font('Helvetica-Bold')
-        .text("LOGO", 90, 80);
+      // Add logo if organization has one, otherwise placeholder
+      if (organization?.logo) {
+        const logoPath = path.join(process.cwd(), "uploads", organization.logo);
+        if (fs.existsSync(logoPath)) {
+          try {
+            doc.image(logoPath, 60, 60, { 
+              width: 100,
+              height: 60,
+              fit: [100, 60],
+              align: 'center',
+              valign: 'center',
+            });
+          } catch (error) {
+            console.error(`Error loading logo ${logoPath}:`, error);
+            // Use a placeholder if the logo can't be loaded
+            drawLogoPlaceholder();
+          }
+        } else {
+          drawLogoPlaceholder();
+        }
+      } else {
+        drawLogoPlaceholder();
+      }
 
       // Customer Information Section
       doc.moveDown(2);
@@ -260,9 +297,9 @@ export async function createPDF(search: Search): Promise<Buffer> {
       // Footer
       doc.fontSize(9)
         .fillColor(darkGray)
-        .text("CarSearch Pro - Uw specialist in auto zoekopdrachten", 50, 750, { align: 'center' })
+        .text(`${companyName} - Uw specialist in auto zoekopdrachten`, 50, 750, { align: 'center' })
         .fontSize(8)
-        .text("Tel: 020-123456 | info@carsearchpro.nl | www.carsearchpro.nl", 50, 765, { align: 'center' });
+        .text(contactInfo, 50, 765, { align: 'center' });
 
       // Finalize the PDF
       doc.end();

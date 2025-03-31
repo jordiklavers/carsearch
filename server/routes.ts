@@ -2,7 +2,13 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { insertSearchSchema, searchStatuses } from "@shared/schema";
+import { 
+  insertSearchSchema, 
+  searchStatuses, 
+  insertOrganizationSchema, 
+  updateUserProfileSchema, 
+  userRoles 
+} from "@shared/schema";
 import { setupAuth } from "./auth";
 import multer from "multer";
 import path from "path";
@@ -85,11 +91,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/searches", isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertSearchSchema.parse(req.body);
-      const search = await storage.createSearch({
+      
+      // Add null for any undefined additionalRequirements
+      // Ensure status is always set to "active" for new searches
+      const searchData = {
         ...validatedData,
         userId: req.user!.id,
-        images: []
-      });
+        images: [],
+        status: "active" as const,
+        additionalRequirements: validatedData.additionalRequirements || null
+      };
+      
+      const search = await storage.createSearch(searchData);
       
       res.status(201).json(search);
     } catch (error: any) {
@@ -115,10 +128,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const validatedData = insertSearchSchema.parse(req.body);
-      const updatedSearch = await storage.updateSearch(id, {
+      
+      // Include search.images to maintain images
+      // Add null for any undefined additionalRequirements
+      // Keep existing status if not provided, and ensure it's typed correctly
+      const status = validatedData.status ? 
+        (validatedData.status as "active" | "completed") : 
+        (search.status as "active" | "completed");
+        
+      const updateData = {
         ...validatedData,
-        userId: req.user!.id
-      });
+        userId: req.user!.id,
+        images: search.images,
+        status,
+        additionalRequirements: validatedData.additionalRequirements || null
+      };
+      
+      const updatedSearch = await storage.updateSearch(id, updateData);
       
       res.json(updatedSearch);
     } catch (error: any) {
@@ -271,6 +297,259 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Content-Length', pdfBuffer.length);
       
       res.send(pdfBuffer);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // User profile management
+  app.get("/api/profile", isAuthenticated, async (req, res) => {
+    try {
+      res.json(req.user);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get current user's organization
+  app.get("/api/my-organization", isAuthenticated, async (req, res) => {
+    try {
+      if (!req.user!.organizationId) {
+        return res.status(404).json({ message: "Geen organisatie gevonden" });
+      }
+      
+      const organization = await storage.getOrganizationById(req.user!.organizationId);
+      if (!organization) {
+        return res.status(404).json({ message: "Organisatie niet gevonden" });
+      }
+      
+      res.json(organization);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/profile", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = updateUserProfileSchema.parse(req.body);
+      const updatedUser = await storage.updateUserProfile(req.user!.id, validatedData);
+      res.json(updatedUser);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validatiefout", errors: error.errors });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Organization management
+  app.get("/api/organizations/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const organization = await storage.getOrganizationById(id);
+      
+      if (!organization) {
+        return res.status(404).json({ message: "Organisatie niet gevonden" });
+      }
+      
+      // Check if user is part of this organization
+      if (req.user!.organizationId !== id) {
+        return res.status(403).json({ message: "Geen toegang tot deze organisatie" });
+      }
+      
+      res.json(organization);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/organizations", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertOrganizationSchema.parse(req.body);
+      const organization = await storage.createOrganization(validatedData);
+      
+      // Automatically assign the creator as admin
+      await storage.assignUserToOrganization(req.user!.id, organization.id);
+      await storage.updateUserRole(req.user!.id, "admin");
+      
+      res.status(201).json(organization);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validatiefout", errors: error.errors });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/organizations/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const organization = await storage.getOrganizationById(id);
+      
+      if (!organization) {
+        return res.status(404).json({ message: "Organisatie niet gevonden" });
+      }
+      
+      // Check if user is admin of this organization
+      if (req.user!.organizationId !== id || req.user!.role !== "admin") {
+        return res.status(403).json({ message: "Geen toestemming om deze organisatie te bewerken" });
+      }
+      
+      const updatedOrg = await storage.updateOrganization(id, req.body);
+      res.json(updatedOrg);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Organization logo upload
+  app.post("/api/organizations/:id/logo", isAuthenticated, upload.single("logo"), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const organization = await storage.getOrganizationById(id);
+      
+      if (!organization) {
+        return res.status(404).json({ message: "Organisatie niet gevonden" });
+      }
+      
+      // Check if user is admin of this organization
+      if (req.user!.organizationId !== id || req.user!.role !== "admin") {
+        return res.status(403).json({ message: "Geen toestemming om het logo te wijzigen" });
+      }
+      
+      const file = req.file as Express.Multer.File;
+      if (!file) {
+        return res.status(400).json({ message: "Geen bestand geüpload" });
+      }
+      
+      const logoPath = path.basename(file.path);
+      const updatedOrg = await storage.uploadOrganizationLogo(id, logoPath);
+      
+      res.json({ 
+        message: "Logo geüpload", 
+        logoPath: logoPath,
+        organization: updatedOrg
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Organization members management
+  app.get("/api/organizations/:id/members", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const organization = await storage.getOrganizationById(id);
+      
+      if (!organization) {
+        return res.status(404).json({ message: "Organisatie niet gevonden" });
+      }
+      
+      // Check if user is part of this organization
+      if (req.user!.organizationId !== id) {
+        return res.status(403).json({ message: "Geen toegang tot deze organisatie" });
+      }
+      
+      const members = await storage.getOrganizationMembers(id);
+      res.json(members);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update member role (admin only)
+  app.patch("/api/organizations/:orgId/members/:userId/role", isAuthenticated, async (req, res) => {
+    try {
+      const orgId = parseInt(req.params.orgId);
+      const userId = parseInt(req.params.userId);
+      const { role } = req.body;
+      
+      // Validate role
+      if (!userRoles.includes(role)) {
+        return res.status(400).json({ message: "Ongeldige rol" });
+      }
+      
+      // Check if organization exists
+      const organization = await storage.getOrganizationById(orgId);
+      if (!organization) {
+        return res.status(404).json({ message: "Organisatie niet gevonden" });
+      }
+      
+      // Check if user is admin of this organization
+      if (req.user!.organizationId !== orgId || req.user!.role !== "admin") {
+        return res.status(403).json({ message: "Geen toestemming om rollen te wijzigen" });
+      }
+      
+      // Check if target user exists and is part of this organization
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser || targetUser.organizationId !== orgId) {
+        return res.status(404).json({ message: "Gebruiker niet gevonden in deze organisatie" });
+      }
+      
+      // Update the role
+      const updatedUser = await storage.updateUserRole(userId, role);
+      res.json(updatedUser);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Add member to organization (admin only)
+  app.post("/api/organizations/:id/members", isAuthenticated, async (req, res) => {
+    try {
+      const orgId = parseInt(req.params.id);
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "Gebruikers-ID is vereist" });
+      }
+      
+      // Check if organization exists
+      const organization = await storage.getOrganizationById(orgId);
+      if (!organization) {
+        return res.status(404).json({ message: "Organisatie niet gevonden" });
+      }
+      
+      // Check if user is admin of this organization
+      if (req.user!.organizationId !== orgId || req.user!.role !== "admin") {
+        return res.status(403).json({ message: "Geen toestemming om leden toe te voegen" });
+      }
+      
+      // Check if target user exists and is not already part of an organization
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "Gebruiker niet gevonden" });
+      }
+      
+      if (targetUser.organizationId) {
+        return res.status(400).json({ message: "Gebruiker is al lid van een organisatie" });
+      }
+      
+      // Add the user to the organization
+      const updatedUser = await storage.assignUserToOrganization(userId, orgId);
+      res.json(updatedUser);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get organization searches (for members)
+  app.get("/api/organizations/:id/searches", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const organization = await storage.getOrganizationById(id);
+      
+      if (!organization) {
+        return res.status(404).json({ message: "Organisatie niet gevonden" });
+      }
+      
+      // Check if user is part of this organization
+      if (req.user!.organizationId !== id) {
+        return res.status(403).json({ message: "Geen toegang tot deze organisatie" });
+      }
+      
+      const searches = await storage.getSearchesByOrganizationId(id);
+      res.json(searches);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

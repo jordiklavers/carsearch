@@ -2,11 +2,48 @@ import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzl
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Organization roles
+export const userRoles = ["admin", "member"] as const;
+
+// Organization schema
+export const organizations = pgTable("organizations", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  logo: text("logo"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  pdfPrimaryColor: text("pdf_primary_color").default("#4a6da7"),
+  pdfSecondaryColor: text("pdf_secondary_color").default("#333333"),
+  pdfCompanyName: text("pdf_company_name").default("CarSearch Pro"),
+  pdfContactInfo: text("pdf_contact_info").default("Tel: 020-123456 | info@carsearchpro.nl | www.carsearchpro.nl"),
+});
+
+export const insertOrganizationSchema = createInsertSchema(organizations)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    logo: z.string().optional(),
+    pdfPrimaryColor: z.string().optional(),
+    pdfSecondaryColor: z.string().optional(),
+    pdfCompanyName: z.string().optional(),
+    pdfContactInfo: z.string().optional(),
+  });
+
+export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
+export type Organization = typeof organizations.$inferSelect;
+
 // User schema
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  email: text("email"),
+  phone: text("phone"),
+  organizationId: integer("organization_id"),
+  role: text("role", { enum: userRoles }).default("member"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -14,7 +51,22 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
 });
 
+export const updateUserProfileSchema = createInsertSchema(users)
+  .pick({
+    firstName: true,
+    lastName: true,
+    email: true,
+    phone: true,
+  })
+  .extend({
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    email: z.string().email().optional(),
+    phone: z.string().optional(),
+  });
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpdateUserProfile = z.infer<typeof updateUserProfileSchema>;
 export type User = typeof users.$inferSelect;
 
 // Car data constants
