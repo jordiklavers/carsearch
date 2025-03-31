@@ -22,39 +22,39 @@ export function Sidebar() {
         <nav className="flex-1 pt-5 pb-4 overflow-y-auto">
           <div className="px-4 space-y-1">
             <Link href="/">
-              <a className={cn(
-                "flex items-center px-4 py-3 text-sm font-medium rounded-md",
+              <div className={cn(
+                "flex items-center px-4 py-3 text-sm font-medium rounded-md cursor-pointer",
                 location === "/" 
                   ? "bg-primary-hover text-white" 
                   : "text-slate-300 hover:bg-primary-hover hover:text-white"
               )}>
                 <i className="fas fa-tachometer-alt mr-3 text-accent"></i>
                 Dashboard
-              </a>
+              </div>
             </Link>
             
             <Link href="/search/new">
-              <a className={cn(
-                "flex items-center px-4 py-3 text-sm font-medium rounded-md",
+              <div className={cn(
+                "flex items-center px-4 py-3 text-sm font-medium rounded-md cursor-pointer",
                 location === "/search/new" 
                   ? "bg-primary-hover text-white" 
                   : "text-slate-300 hover:bg-primary-hover hover:text-white"
               )}>
                 <i className="fas fa-search mr-3"></i>
                 Nieuwe Zoekopdracht
-              </a>
+              </div>
             </Link>
             
             <Link href="/history">
-              <a className={cn(
-                "flex items-center px-4 py-3 text-sm font-medium rounded-md",
+              <div className={cn(
+                "flex items-center px-4 py-3 text-sm font-medium rounded-md cursor-pointer",
                 location === "/history" 
                   ? "bg-primary-hover text-white" 
                   : "text-slate-300 hover:bg-primary-hover hover:text-white"
               )}>
                 <i className="fas fa-history mr-3"></i>
                 Geschiedenis
-              </a>
+              </div>
             </Link>
           </div>
         </nav>

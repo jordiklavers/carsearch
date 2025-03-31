@@ -8,33 +8,33 @@ export function MobileNav() {
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-10">
       <div className="flex justify-around p-2">
         <Link href="/">
-          <a className={cn(
-            "flex flex-col items-center p-2",
+          <div className={cn(
+            "flex flex-col items-center p-2 cursor-pointer",
             location === "/" ? "text-accent" : "text-slate-500"
           )}>
             <i className="fas fa-tachometer-alt text-lg"></i>
             <span className="text-xs mt-1">Dashboard</span>
-          </a>
+          </div>
         </Link>
         
         <Link href="/search/new">
-          <a className={cn(
-            "flex flex-col items-center p-2",
+          <div className={cn(
+            "flex flex-col items-center p-2 cursor-pointer",
             location === "/search/new" ? "text-accent" : "text-slate-500"
           )}>
             <i className="fas fa-search text-lg"></i>
             <span className="text-xs mt-1">Nieuw</span>
-          </a>
+          </div>
         </Link>
         
         <Link href="/history">
-          <a className={cn(
-            "flex flex-col items-center p-2",
+          <div className={cn(
+            "flex flex-col items-center p-2 cursor-pointer",
             location === "/history" ? "text-accent" : "text-slate-500"
           )}>
             <i className="fas fa-history text-lg"></i>
             <span className="text-xs mt-1">Geschiedenis</span>
-          </a>
+          </div>
         </Link>
       </div>
     </div>
