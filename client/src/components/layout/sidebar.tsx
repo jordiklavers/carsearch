@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,21 @@ import { cn } from "@/lib/utils";
 export function Sidebar() {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
+  const [organizationName, setOrganizationName] = useState<string>("Organisatie");
+  
+  // Fetch organization name if user belongs to one
+  useEffect(() => {
+    if (user?.organizationId) {
+      fetch(`/api/organizations/${user.organizationId}`)
+        .then(res => res.json())
+        .then(data => {
+          setOrganizationName(data.name);
+        })
+        .catch(err => {
+          console.error("Error fetching organization:", err);
+        });
+    }
+  }, [user?.organizationId]);
   
   // Get user's initials for avatar
   const getInitials = () => {
@@ -79,33 +95,60 @@ export function Sidebar() {
                 Mijn Profiel
               </div>
             </Link>
+
+            {/* Organization Management Link for Admins */}
+            {user?.role === "admin" && user?.organizationId && (
+              <Link href="/organization">
+                <div className={cn(
+                  "flex items-center px-4 py-3 text-sm font-medium rounded-md cursor-pointer",
+                  location === "/organization" 
+                    ? "bg-primary-hover text-white" 
+                    : "text-slate-300 hover:bg-primary-hover hover:text-white"
+                )}>
+                  <i className="fas fa-building mr-3"></i>
+                  Organisatie Beheer
+                </div>
+              </Link>
+            )}
           </div>
         </nav>
         
         {/* User Profile */}
-        <div className="flex items-center p-4 border-t border-slate-700">
-          <Avatar className="h-8 w-8">
-            <AvatarImage 
-              src={user?.profilePicture ? `/api/images/${user.profilePicture}` : undefined} 
-              alt={user?.username} 
-            />
-            <AvatarFallback className="text-xs bg-slate-700 text-white">
-              {getInitials()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="ml-3">
-            <p className="text-sm font-medium text-white">
-              {user?.firstName && user?.lastName 
-                ? `${user.firstName} ${user.lastName}` 
-                : user?.username}
-            </p>
-            <button 
-              className="text-xs text-slate-400 hover:text-white"
-              onClick={() => logoutMutation.mutate()}
-            >
-              Uitloggen
-            </button>
+        <div className="flex flex-col p-4 border-t border-slate-700">
+          <div className="flex items-center">
+            <Avatar className="h-8 w-8">
+              <AvatarImage 
+                src={user?.profilePicture ? `/api/images/${user.profilePicture}` : undefined} 
+                alt={user?.username} 
+              />
+              <AvatarFallback className="text-xs bg-slate-700 text-white">
+                {getInitials()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-white">
+                {user?.firstName && user?.lastName 
+                  ? `${user.firstName} ${user.lastName}` 
+                  : user?.username}
+              </p>
+              <p className="text-xs text-slate-300">
+                {user?.role && user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+              </p>
+            </div>
           </div>
+          
+          {user?.organizationId && (
+            <div className="mt-2 mb-2 px-2 py-1 bg-primary-hover rounded text-xs text-center text-white">
+              {organizationName}
+            </div>
+          )}
+          
+          <button 
+            className="text-xs text-slate-400 hover:text-white mt-1 text-center"
+            onClick={() => logoutMutation.mutate()}
+          >
+            Uitloggen
+          </button>
         </div>
       </div>
     </div>

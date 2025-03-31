@@ -25,7 +25,8 @@ import {
   carTypes, 
   carColors, 
   transmissionTypes, 
-  fuelTypes
+  fuelTypes,
+  searchStatuses
 } from "@shared/schema";
 import { uploadImages } from "@/lib/file-upload";
 import { PDFPreview } from "@/components/pdf/pdf-preview";
@@ -149,21 +150,21 @@ export function SearchForm({ searchId }: SearchFormProps) {
   useState(() => {
     if (searchData && !form.formState.isDirty) {
       form.reset({
-        customerFirstName: searchData.customerFirstName,
-        customerLastName: searchData.customerLastName,
-        customerEmail: searchData.customerEmail,
-        customerPhone: searchData.customerPhone,
-        carMake: searchData.carMake,
-        carModel: searchData.carModel,
-        carType: searchData.carType,
-        carYear: searchData.carYear,
-        carColor: searchData.carColor,
-        carTransmission: searchData.carTransmission,
-        carFuel: searchData.carFuel,
-        minPrice: searchData.minPrice,
-        maxPrice: searchData.maxPrice,
-        additionalRequirements: searchData.additionalRequirements,
-        status: searchData.status,
+        customerFirstName: searchData.customerFirstName || "",
+        customerLastName: searchData.customerLastName || "",
+        customerEmail: searchData.customerEmail || "",
+        customerPhone: searchData.customerPhone || "",
+        carMake: searchData.carMake || "",
+        carModel: searchData.carModel || "",
+        carType: searchData.carType || "",
+        carYear: searchData.carYear || "",
+        carColor: searchData.carColor || "",
+        carTransmission: searchData.carTransmission || "",
+        carFuel: searchData.carFuel || "",
+        minPrice: searchData.minPrice || 0,
+        maxPrice: searchData.maxPrice || 0,
+        additionalRequirements: searchData.additionalRequirements || "",
+        status: searchData.status || "active",
       });
     }
   });
@@ -540,6 +541,52 @@ export function SearchForm({ searchId }: SearchFormProps) {
             </div>
           </div>
           
+          {/* Status Section */}
+          <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
+            <div className="px-4 py-5 sm:px-6 border-b border-slate-200">
+              <h3 className="text-lg font-medium leading-6 text-slate-900">Status</h3>
+              <p className="mt-1 text-sm text-slate-500">Pas de status van deze zoekopdracht aan.</p>
+            </div>
+            <div className="px-4 py-5 sm:p-6">
+              <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                <div className="sm:col-span-3">
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecteer status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {searchStatuses.map(status => (
+                              <SelectItem key={status} value={status}>
+                                {status === "active" ? "Actief" : 
+                                 status === "completed" ? "Afgerond" : 
+                                 status === "cancelled" ? "Geannuleerd" : status}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        <p className="mt-2 text-sm text-slate-500">
+                          Actief: Zoekopdracht is lopend. Afgerond: Auto is gevonden. Geannuleerd: Zoektocht gestopt.
+                        </p>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          
           {/* Images Section */}
           <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
             <div className="px-4 py-5 sm:px-6 border-b border-slate-200">
@@ -572,7 +619,7 @@ export function SearchForm({ searchId }: SearchFormProps) {
                     <button 
                       type="button"
                       onClick={() => handleRemoveImage(index)}
-                      className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-sm"
+                      className="absolute top-2 right-2 bg-white rounded-md p-1 shadow-sm w-6 h-6 flex items-center justify-center"
                     >
                       <i className="fas fa-times text-red-500"></i>
                     </button>
