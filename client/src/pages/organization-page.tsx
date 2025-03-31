@@ -191,6 +191,7 @@ export default function OrganizationPage() {
           <TabsTrigger value="general">Algemeen</TabsTrigger>
           <TabsTrigger value="branding">Huisstijl</TabsTrigger>
           {user?.role === 'admin' && <TabsTrigger value="members">Leden</TabsTrigger>}
+          {user?.role === 'admin' && <TabsTrigger value="beheer">Beheer</TabsTrigger>}
         </TabsList>
         
         {/* General tab */}
@@ -451,6 +452,117 @@ export default function OrganizationPage() {
                         )}
                       </tbody>
                     </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+        
+        {/* Beheer tab - for advanced member management */}
+        {user?.role === 'admin' && (
+          <TabsContent value="beheer">
+            <Card>
+              <CardHeader>
+                <CardTitle>Ledenbeheer</CardTitle>
+                <CardDescription>
+                  Geavanceerd beheer van organisatieleden.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {membersLoading ? (
+                  <CarLoading text="Leden laden..." />
+                ) : (
+                  <div className="space-y-6">
+                    <div className="rounded-md border">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-slate-50 border-b">
+                            <th className="p-3 text-left font-medium text-sm">Naam</th>
+                            <th className="p-3 text-left font-medium text-sm">Email</th>
+                            <th className="p-3 text-left font-medium text-sm">Rol</th>
+                            <th className="p-3 text-left font-medium text-sm">Acties</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {members && members.length > 0 ? (
+                            members.map((member: User) => (
+                              <tr key={member.id} className="border-b">
+                                <td className="p-3 text-sm">
+                                  {member.firstName || "Geen naam"} {member.lastName || ""}
+                                  {member.id === user.id && (
+                                    <span className="text-xs text-slate-500 ml-1">(jij)</span>
+                                  )}
+                                </td>
+                                <td className="p-3 text-sm">{member.email || member.username}</td>
+                                <td className="p-3 text-sm capitalize">{member.role}</td>
+                                <td className="p-3">
+                                  {member.id !== user.id && (
+                                    <div className="flex space-x-2">
+                                      {member.role === 'member' ? (
+                                        <Button
+                                          variant="secondary"
+                                          size="sm"
+                                          onClick={() => handleRoleChange(member.id, 'admin')}
+                                          disabled={updateUserRoleMutation.isPending}
+                                        >
+                                          Promoveer naar admin
+                                        </Button>
+                                      ) : (
+                                        <Button
+                                          variant="secondary"
+                                          size="sm"
+                                          onClick={() => handleRoleChange(member.id, 'member')}
+                                          disabled={updateUserRoleMutation.isPending}
+                                        >
+                                          Zet naar lid
+                                        </Button>
+                                      )}
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={4} className="p-4 text-center text-sm text-slate-500">
+                                Geen leden gevonden
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    {/* Auto-generate PDF contact info */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">PDF Contactgegevens automatisch genereren</CardTitle>
+                        <CardDescription>
+                          Genereer contactgegevens voor in PDF's op basis van de organisatie-informatie.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Button 
+                          onClick={() => {
+                            if (organization) {
+                              const contactInfo = `${organization.name}\n${organization.address || ''}, ${organization.zipCode || ''} ${organization.city || ''}\nTel: ${organization.phone || ''}\nEmail: ${organization.email || ''}\nWeb: ${organization.website || ''}`;
+                              
+                              // Update the organization
+                              updateOrgMutation.mutate({
+                                ...organization,
+                                pdfContactInfo: contactInfo,
+                              });
+                            }
+                          }}
+                          disabled={!organization || updateOrgMutation.isPending}
+                        >
+                          {updateOrgMutation.isPending ? (
+                            <CarLoading size="sm" type="spinner" text="Genereren..." />
+                          ) : "Contactgegevens genereren"}
+                        </Button>
+                      </CardContent>
+                    </Card>
                   </div>
                 )}
               </CardContent>

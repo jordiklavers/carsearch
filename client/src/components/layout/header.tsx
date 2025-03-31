@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { useLocation } from "wouter";
 
 interface HeaderProps {
   toggleMobileMenu: () => void;
@@ -10,9 +11,19 @@ interface HeaderProps {
 export function Header({ toggleMobileMenu }: HeaderProps) {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const [, setLocation] = useLocation();
+  
+  // Handle search submission
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      // Redirect to history page with search query
+      setLocation(`/history?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
   
   return (
-    <header className="bg-white shadow-sm z-10">
+    <header className="bg-white shadow-sm z-20 sticky top-0">
       <div className="flex items-center justify-between h-16 px-4 md:px-6">
         {/* Mobile menu button */}
         <button 
@@ -24,7 +35,7 @@ export function Header({ toggleMobileMenu }: HeaderProps) {
         </button>
         
         {/* Search */}
-        <div className="relative w-full max-w-md hidden md:block">
+        <form onSubmit={handleSearch} className="relative w-full max-w-md hidden md:block">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <i className="fas fa-search text-slate-400"></i>
           </div>
@@ -35,7 +46,15 @@ export function Header({ toggleMobileMenu }: HeaderProps) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-        </div>
+          <Button 
+            type="submit" 
+            variant="ghost" 
+            size="sm" 
+            className="absolute inset-y-0 right-0 px-3"
+          >
+            Zoek
+          </Button>
+        </form>
         
         {/* Mobile profile */}
         <div className="md:hidden flex items-center">

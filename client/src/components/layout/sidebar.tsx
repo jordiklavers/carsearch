@@ -35,14 +35,19 @@ export function Sidebar() {
   };
 
   return (
-    <div className="hidden md:flex md:w-64 md:flex-col bg-primary text-white h-full">
+    <div className="hidden md:flex md:w-64 md:flex-col bg-primary text-white h-screen sticky top-0 left-0">
       <div className="flex flex-col h-full">
         {/* Logo */}
-        <div className="flex items-center justify-center h-16 border-b border-slate-700 px-4">
+        <div className="flex flex-col items-center justify-center h-auto border-b border-slate-700 px-4 py-3">
           <div className="flex items-center space-x-2">
             <i className="fas fa-car-side text-accent"></i>
             <span className="text-xl font-bold">CarSearch Pro</span>
           </div>
+          {user?.organizationId && (
+            <div className="mt-2 px-4 py-1 bg-primary-hover rounded-md text-sm text-center text-white w-full">
+              {organizationName}
+            </div>
+          )}
         </div>
         
         {/* Navigation */}

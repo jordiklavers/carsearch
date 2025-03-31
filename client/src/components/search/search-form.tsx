@@ -669,6 +669,58 @@ export function SearchForm({ searchId }: SearchFormProps) {
               </div>
             </div>
           </div>
+          
+          {/* Save PDF button at bottom of form */}
+          <div className="flex justify-end mb-8 mt-6 px-4">
+            <Button 
+              type="button"
+              variant="outline"
+              onClick={() => {
+                if (searchData) {
+                  setCurrentSearch(searchData);
+                  setIsPdfPreviewOpen(true);
+                } else {
+                  toast({
+                    title: "Kan geen PDF genereren",
+                    description: "Sla de zoekopdracht eerst op voordat je een PDF genereert.",
+                    variant: "destructive"
+                  });
+                }
+              }}
+              disabled={!searchData || downloadMutation.isPending}
+              className="mr-2"
+            >
+              {downloadMutation.isPending ? (
+                <>
+                  <CarLoading type="car" size="sm" className="mr-2" />
+                  <span>PDF genereren...</span>
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-download mr-2"></i>
+                  <span>Download PDF</span>
+                </>
+              )}
+            </Button>
+            
+            <Button 
+              type="submit" 
+              form="search-form" 
+              disabled={mutation.isPending}
+            >
+              {mutation.isPending ? (
+                <>
+                  <CarLoading type="car" size="sm" className="mr-2" />
+                  <span>Bezig met opslaan...</span>
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-save mr-2"></i>
+                  <span>Opslaan</span>
+                </>
+              )}
+            </Button>
+          </div>
         </form>
       </Form>
       
