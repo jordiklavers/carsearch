@@ -434,6 +434,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: error.message });
     }
   });
+  
+  // Upload profile picture
+  app.post("/api/profile/picture", isAuthenticated, upload.single("profilePicture"), async (req, res) => {
+    try {
+      const file = req.file as Express.Multer.File;
+      if (!file) {
+        return res.status(400).json({ message: "Geen bestand geüpload" });
+      }
+      
+      const picturePath = path.basename(file.path);
+      const updatedUser = await storage.updateUserProfile(req.user!.id, {
+        profilePicture: picturePath
+      });
+      
+      res.json({ 
+        message: "Profielfoto geüpload", 
+        picturePath: picturePath,
+        user: updatedUser
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   // Organization members management
   app.get("/api/organizations/:id/members", isAuthenticated, async (req, res) => {
@@ -550,6 +573,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const searches = await storage.getSearchesByOrganizationId(id);
       res.json(searches);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // User organization assignment
+  app.post("/api/users/assign-organization", isAuthenticated, async (req, res) => {
+    try {
+      const { username, organizationId } = req.body;
+      
+      if (!username || !organizationId) {
+        return res.status(400).json({ message: "Gebruikersnaam en organisatie-ID zijn vereist" });
+      }
+      
+      // Check if organization exists
+      const organization = await storage.getOrganizationById(organizationId);
+      if (!organization) {
+        return res.status(404).json({ message: "Organisatie niet gevonden" });
+      }
+      
+      // Find the user by username
+      const targetUser = await storage.getUserByUsername(username);
+      if (!targetUser) {
+        return res.status(404).json({ message: "Gebruiker niet gevonden" });
+      }
+      
+      // Assign the user to the organization
+      const updatedUser = await storage.assignUserToOrganization(targetUser.id, organizationId);
+      res.json({
+        message: `${username} is toegewezen aan organisatie ${organization.name}`,
+        user: updatedUser
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // List all organizations (for development/admin purposes)
+  app.get("/api/organizations", isAuthenticated, async (req, res) => {
+    try {
+      // Filter organizations to just return id and name for dropdown options
+      const orgs = await Promise.all(
+        Array.from({ length: storage.getOrganizationIdCounter() }, (_, i) => i + 1)
+          .map(async (id) => {
+            const org = await storage.getOrganizationById(id);
+            return org ? { id: org.id, name: org.name } : null;
+          })
+      );
+      
+      // Filter out null values (deleted or non-existent orgs)
+      const filteredOrgs = orgs.filter(org => org !== null);
+      
+      res.json(filteredOrgs);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

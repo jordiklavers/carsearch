@@ -36,6 +36,16 @@ export function MobileNav() {
             <span className="text-xs mt-1">Geschiedenis</span>
           </div>
         </Link>
+        
+        <Link href="/profile">
+          <div className={cn(
+            "flex flex-col items-center p-2 cursor-pointer",
+            location === "/profile" ? "text-accent" : "text-slate-500"
+          )}>
+            <i className="fas fa-user-cog text-lg"></i>
+            <span className="text-xs mt-1">Profiel</span>
+          </div>
+        </Link>
       </div>
     </div>
   );

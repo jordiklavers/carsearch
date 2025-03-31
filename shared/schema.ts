@@ -10,22 +10,39 @@ export const organizations = pgTable("organizations", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   logo: text("logo"),
+  address: text("address"),
+  city: text("city"),
+  zipCode: text("zip_code"),
+  phone: text("phone"),
+  email: text("email"),
+  website: text("website"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  // PDF Styling
   pdfPrimaryColor: text("pdf_primary_color").default("#4a6da7"),
   pdfSecondaryColor: text("pdf_secondary_color").default("#333333"),
   pdfCompanyName: text("pdf_company_name").default("CarSearch Pro"),
   pdfContactInfo: text("pdf_contact_info").default("Tel: 020-123456 | info@carsearchpro.nl | www.carsearchpro.nl"),
+  pdfHeaderFont: text("pdf_header_font").default("Helvetica-Bold"),
+  pdfBodyFont: text("pdf_body_font").default("Helvetica"),
 });
 
 export const insertOrganizationSchema = createInsertSchema(organizations)
   .omit({ id: true, createdAt: true, updatedAt: true })
   .extend({
     logo: z.string().optional(),
+    address: z.string().optional(),
+    city: z.string().optional(),
+    zipCode: z.string().optional(),
+    phone: z.string().optional(),
+    email: z.string().email().optional(),
+    website: z.string().url().optional().or(z.literal('')),
     pdfPrimaryColor: z.string().optional(),
     pdfSecondaryColor: z.string().optional(),
     pdfCompanyName: z.string().optional(),
     pdfContactInfo: z.string().optional(),
+    pdfHeaderFont: z.string().optional(),
+    pdfBodyFont: z.string().optional(),
   });
 
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
@@ -36,10 +53,11 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  firstName: text("first_name"),
-  lastName: text("last_name"),
-  email: text("email"),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull(),
   phone: text("phone"),
+  profilePicture: text("profile_picture"),
   organizationId: integer("organization_id"),
   role: text("role", { enum: userRoles }).default("member"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -49,6 +67,9 @@ export const users = pgTable("users", {
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+  firstName: true,
+  lastName: true,
+  email: true,
 });
 
 export const updateUserProfileSchema = createInsertSchema(users)
@@ -57,12 +78,14 @@ export const updateUserProfileSchema = createInsertSchema(users)
     lastName: true,
     email: true,
     phone: true,
+    profilePicture: true,
   })
   .extend({
     firstName: z.string().optional(),
     lastName: z.string().optional(),
     email: z.string().email().optional(),
     phone: z.string().optional(),
+    profilePicture: z.string().optional(),
   });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

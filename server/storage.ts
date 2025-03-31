@@ -32,6 +32,7 @@ export interface IStorage {
   createOrganization(organization: InsertOrganization): Promise<Organization>;
   updateOrganization(id: number, organization: Partial<Organization>): Promise<Organization>;
   uploadOrganizationLogo(id: number, logoPath: string): Promise<Organization>;
+  getOrganizationIdCounter(): number; // Get the current organization ID counter for iteration
   
   // Search operations
   getSearchesByUserId(userId: number): Promise<Search[]>;
@@ -86,10 +87,8 @@ export class MemStorage implements IStorage {
     const user: User = { 
       ...insertUser, 
       id,
-      firstName: null,
-      lastName: null,
-      email: null,
       phone: null,
+      profilePicture: null,
       organizationId: null,
       role: "member",
       createdAt: now,
@@ -166,15 +165,23 @@ export class MemStorage implements IStorage {
     const id = this.organizationIdCounter++;
     const now = new Date();
     const organization: Organization = {
-      ...orgData,
       id,
+      name: orgData.name,
+      logo: orgData.logo || null,
+      address: orgData.address || null,
+      city: orgData.city || null,
+      zipCode: orgData.zipCode || null,
+      phone: orgData.phone || null,
+      email: orgData.email || null,
+      website: orgData.website || null,
       createdAt: now,
       updatedAt: now,
-      logo: orgData.logo || null,
       pdfPrimaryColor: orgData.pdfPrimaryColor || "#4a6da7",
       pdfSecondaryColor: orgData.pdfSecondaryColor || "#333333",
       pdfCompanyName: orgData.pdfCompanyName || "CarSearch Pro",
-      pdfContactInfo: orgData.pdfContactInfo || "Tel: 020-123456 | info@carsearchpro.nl | www.carsearchpro.nl"
+      pdfContactInfo: orgData.pdfContactInfo || "Tel: 020-123456 | info@carsearchpro.nl | www.carsearchpro.nl",
+      pdfHeaderFont: orgData.pdfHeaderFont || "Helvetica-Bold", 
+      pdfBodyFont: orgData.pdfBodyFont || "Helvetica"
     };
 
     this.organizations.set(id, organization);
@@ -212,6 +219,10 @@ export class MemStorage implements IStorage {
 
     this.organizations.set(id, updatedOrg);
     return updatedOrg;
+  }
+  
+  getOrganizationIdCounter(): number {
+    return this.organizationIdCounter;
   }
 
   // Search operations

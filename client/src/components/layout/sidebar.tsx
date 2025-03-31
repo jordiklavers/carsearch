@@ -1,11 +1,22 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 export function Sidebar() {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
+  
+  // Get user's initials for avatar
+  const getInitials = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
+    } else if (user?.username) {
+      return user.username.substring(0, 2).toUpperCase();
+    }
+    return "";
+  };
 
   return (
     <div className="hidden md:flex md:w-64 md:flex-col bg-primary text-white h-full">
@@ -56,16 +67,38 @@ export function Sidebar() {
                 Geschiedenis
               </div>
             </Link>
+            
+            <Link href="/profile">
+              <div className={cn(
+                "flex items-center px-4 py-3 text-sm font-medium rounded-md cursor-pointer",
+                location === "/profile" 
+                  ? "bg-primary-hover text-white" 
+                  : "text-slate-300 hover:bg-primary-hover hover:text-white"
+              )}>
+                <i className="fas fa-user-cog mr-3"></i>
+                Mijn Profiel
+              </div>
+            </Link>
           </div>
         </nav>
         
         {/* User Profile */}
         <div className="flex items-center p-4 border-t border-slate-700">
-          <div className="h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center">
-            <i className="fas fa-user text-sm"></i>
-          </div>
+          <Avatar className="h-8 w-8">
+            <AvatarImage 
+              src={user?.profilePicture ? `/api/images/${user.profilePicture}` : undefined} 
+              alt={user?.username} 
+            />
+            <AvatarFallback className="text-xs bg-slate-700 text-white">
+              {getInitials()}
+            </AvatarFallback>
+          </Avatar>
           <div className="ml-3">
-            <p className="text-sm font-medium text-white">{user?.username}</p>
+            <p className="text-sm font-medium text-white">
+              {user?.firstName && user?.lastName 
+                ? `${user.firstName} ${user.lastName}` 
+                : user?.username}
+            </p>
             <button 
               className="text-xs text-slate-400 hover:text-white"
               onClick={() => logoutMutation.mutate()}

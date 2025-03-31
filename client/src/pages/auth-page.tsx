@@ -33,6 +33,9 @@ const loginSchema = insertUserSchema.pick({
 
 const registerSchema = insertUserSchema.extend({
   confirmPassword: z.string().min(8, "Wachtwoord moet minimaal 8 karakters bevatten"),
+  firstName: z.string().min(1, "Voornaam is verplicht"),
+  lastName: z.string().min(1, "Achternaam is verplicht"),
+  email: z.string().email("Voer een geldig e-mailadres in"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Wachtwoorden komen niet overeen",
   path: ["confirmPassword"],
@@ -68,6 +71,9 @@ export default function AuthPage() {
       username: "",
       password: "",
       confirmPassword: "",
+      firstName: "",
+      lastName: "",
+      email: "",
     },
   });
 
@@ -190,6 +196,50 @@ export default function AuthPage() {
                           <FormLabel>Bevestig wachtwoord</FormLabel>
                           <FormControl>
                             <Input type="password" placeholder="Bevestig uw wachtwoord" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={registerForm.control}
+                        name="firstName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Voornaam</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Uw voornaam" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={registerForm.control}
+                        name="lastName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Achternaam</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Uw achternaam" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={registerForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>E-mailadres</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="uw@email.nl" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
