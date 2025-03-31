@@ -2,6 +2,7 @@ import {
   users, 
   searches, 
   organizations,
+  customers,
   User, 
   InsertUser, 
   UpdateUserProfile,
@@ -9,6 +10,8 @@ import {
   searchStatuses, 
   Organization,
   InsertOrganization,
+  Customer,
+  InsertCustomer,
   userRoles
 } from "@shared/schema";
 import session from "express-session";
@@ -48,6 +51,13 @@ export interface IStorage {
   updateSearchImages(id: number, images: string[]): Promise<Search>;
   deleteSearch(id: number): Promise<void>;
   
+  // Customer operations
+  getCustomersByOrganizationId(organizationId: number): Promise<Customer[]>;
+  getCustomerById(id: number): Promise<Customer | undefined>;
+  createCustomer(organizationId: number, customer: InsertCustomer): Promise<Customer>;
+  updateCustomer(id: number, customer: Partial<Customer>): Promise<Customer>;
+  deleteCustomer(id: number): Promise<void>;
+  
   // Session store
   sessionStore: session.Store;
 }
@@ -57,18 +67,22 @@ export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private searches: Map<number, Search>;
   private organizations: Map<number, Organization>;
+  private customers: Map<number, Customer>;
   private userIdCounter: number;
   private searchIdCounter: number;
   private organizationIdCounter: number;
+  private customerIdCounter: number;
   sessionStore: session.Store;
 
   constructor() {
     this.users = new Map();
     this.searches = new Map();
     this.organizations = new Map();
+    this.customers = new Map();
     this.userIdCounter = 1;
     this.searchIdCounter = 1;
     this.organizationIdCounter = 1;
+    this.customerIdCounter = 1;
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
     });
@@ -321,6 +335,61 @@ export class MemStorage implements IStorage {
     }
     
     this.searches.delete(id);
+  }
+
+  // Customer operations
+  async getCustomersByOrganizationId(organizationId: number): Promise<Customer[]> {
+    return Array.from(this.customers.values())
+      .filter(customer => customer.organizationId === organizationId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getCustomerById(id: number): Promise<Customer | undefined> {
+    return this.customers.get(id);
+  }
+
+  async createCustomer(organizationId: number, customerData: InsertCustomer): Promise<Customer> {
+    const id = this.customerIdCounter++;
+    const now = new Date();
+    const customer: Customer = {
+      ...customerData,
+      id,
+      organizationId,
+      phone: customerData.phone || null,
+      address: customerData.address || null,
+      city: customerData.city || null,
+      zipCode: customerData.zipCode || null,
+      notes: customerData.notes || null,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.customers.set(id, customer);
+    return customer;
+  }
+
+  async updateCustomer(id: number, customerData: Partial<Customer>): Promise<Customer> {
+    const existingCustomer = this.customers.get(id);
+    if (!existingCustomer) {
+      throw new Error("Customer not found");
+    }
+    
+    const updatedCustomer: Customer = {
+      ...existingCustomer,
+      ...customerData,
+      id,
+      updatedAt: new Date()
+    };
+    
+    this.customers.set(id, updatedCustomer);
+    return updatedCustomer;
+  }
+
+  async deleteCustomer(id: number): Promise<void> {
+    if (!this.customers.has(id)) {
+      throw new Error("Customer not found");
+    }
+    
+    this.customers.delete(id);
   }
 }
 
@@ -614,6 +683,70 @@ export class DatabaseStorage implements IStorage {
     
     if (!result) {
       throw new Error("Search not found");
+    }
+  }
+
+  // Customer operations
+  async getCustomersByOrganizationId(organizationId: number): Promise<Customer[]> {
+    return db
+      .select()
+      .from(customers)
+      .where(eq(customers.organizationId, organizationId))
+      .orderBy(desc(customers.createdAt));
+  }
+
+  async getCustomerById(id: number): Promise<Customer | undefined> {
+    const [customer] = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.id, id));
+    
+    return customer;
+  }
+
+  async createCustomer(organizationId: number, customerData: InsertCustomer): Promise<Customer> {
+    const [customer] = await db
+      .insert(customers)
+      .values({
+        ...customerData,
+        organizationId,
+        phone: customerData.phone || null,
+        address: customerData.address || null,
+        city: customerData.city || null,
+        zipCode: customerData.zipCode || null,
+        notes: customerData.notes || null
+      })
+      .returning();
+    
+    return customer;
+  }
+
+  async updateCustomer(id: number, customerData: Partial<Customer>): Promise<Customer> {
+    const updates = {
+      ...customerData,
+      updatedAt: new Date()
+    };
+    
+    const [updatedCustomer] = await db
+      .update(customers)
+      .set(updates)
+      .where(eq(customers.id, id))
+      .returning();
+    
+    if (!updatedCustomer) {
+      throw new Error("Customer not found");
+    }
+    
+    return updatedCustomer;
+  }
+
+  async deleteCustomer(id: number): Promise<void> {
+    const result = await db
+      .delete(customers)
+      .where(eq(customers.id, id));
+    
+    if (!result) {
+      throw new Error("Customer not found");
     }
   }
 }

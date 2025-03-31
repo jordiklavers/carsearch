@@ -1,28 +1,28 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { Organization } from "@shared/schema";
 
 export function Sidebar() {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
-  const [organizationName, setOrganizationName] = useState<string>("Organisatie");
   
-  // Fetch organization name if user belongs to one
-  useEffect(() => {
-    if (user?.organizationId) {
-      fetch(`/api/organizations/${user.organizationId}`)
-        .then(res => res.json())
-        .then(data => {
-          setOrganizationName(data.name);
-        })
-        .catch(err => {
-          console.error("Error fetching organization:", err);
-        });
-    }
-  }, [user?.organizationId]);
+  // Fetch organization data using React Query
+  const { data: organization } = useQuery<Organization>({
+    queryKey: ["/api/organizations", user?.organizationId],
+    queryFn: async () => {
+      if (!user?.organizationId) return null;
+      const res = await fetch(`/api/organizations/${user.organizationId}`);
+      if (!res.ok) throw new Error("Failed to load organization");
+      return await res.json();
+    },
+    enabled: !!user?.organizationId,
+    staleTime: Infinity, // Prevent refetching
+  });
   
   // Get user's initials for avatar
   const getInitials = () => {
@@ -43,9 +43,9 @@ export function Sidebar() {
             <i className="fas fa-car-side text-accent"></i>
             <span className="text-xl font-bold">CarSearch Pro</span>
           </div>
-          {user?.organizationId && (
+          {user?.organizationId && organization && (
             <div className="mt-2 px-4 py-1 bg-primary-hover rounded-md text-sm text-center text-white w-full">
-              {organizationName}
+              {organization.name}
             </div>
           )}
         </div>
@@ -86,6 +86,18 @@ export function Sidebar() {
               )}>
                 <i className="fas fa-history mr-3"></i>
                 Geschiedenis
+              </div>
+            </Link>
+
+            <Link href="/customers">
+              <div className={cn(
+                "flex items-center px-4 py-3 text-sm font-medium rounded-md cursor-pointer",
+                location === "/customers" 
+                  ? "bg-primary-hover text-white" 
+                  : "text-slate-300 hover:bg-primary-hover hover:text-white"
+              )}>
+                <i className="fas fa-users mr-3"></i>
+                Klanten
               </div>
             </Link>
             
@@ -142,9 +154,9 @@ export function Sidebar() {
             </div>
           </div>
           
-          {user?.organizationId && (
+          {user?.organizationId && organization && (
             <div className="mt-2 mb-2 px-2 py-1 bg-primary-hover rounded text-xs text-center text-white">
-              {organizationName}
+              {organization.name}
             </div>
           )}
           

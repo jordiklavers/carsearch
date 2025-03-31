@@ -7,7 +7,8 @@ import {
   searchStatuses, 
   insertOrganizationSchema, 
   updateUserProfileSchema, 
-  userRoles 
+  userRoles,
+  insertCustomerSchema
 } from "@shared/schema";
 import { setupAuth } from "./auth";
 import multer from "multer";
@@ -692,6 +693,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: `${username} heeft nu admin rechten`,
         user: updatedUser
       });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Customer API
+  // Get all customers for the current user's organization
+  app.get("/api/customers", isAuthenticated, async (req, res) => {
+    try {
+      if (!req.user!.organizationId) {
+        return res.status(400).json({ message: "U bent geen lid van een organisatie" });
+      }
+      
+      const customers = await storage.getCustomersByOrganizationId(req.user!.organizationId);
+      res.json(customers);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get a customer by ID
+  app.get("/api/customers/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const customer = await storage.getCustomerById(id);
+      
+      if (!customer) {
+        return res.status(404).json({ message: "Klant niet gevonden" });
+      }
+      
+      // Check if user belongs to the same organization as the customer
+      if (req.user!.organizationId !== customer.organizationId) {
+        return res.status(403).json({ message: "Geen toegang tot deze klant" });
+      }
+      
+      res.json(customer);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Create a new customer
+  app.post("/api/customers", isAuthenticated, async (req, res) => {
+    try {
+      if (!req.user!.organizationId) {
+        return res.status(400).json({ message: "U bent geen lid van een organisatie" });
+      }
+      
+      const validatedData = insertCustomerSchema.parse(req.body);
+      const customer = await storage.createCustomer(req.user!.organizationId, validatedData);
+      
+      res.status(201).json(customer);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validatiefout", errors: error.errors });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Update a customer
+  app.patch("/api/customers/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const customer = await storage.getCustomerById(id);
+      
+      if (!customer) {
+        return res.status(404).json({ message: "Klant niet gevonden" });
+      }
+      
+      // Check if user belongs to the same organization as the customer
+      if (req.user!.organizationId !== customer.organizationId) {
+        return res.status(403).json({ message: "Geen toegang tot deze klant" });
+      }
+      
+      const validatedData = insertCustomerSchema.partial().parse(req.body);
+      const updatedCustomer = await storage.updateCustomer(id, validatedData);
+      
+      res.json(updatedCustomer);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validatiefout", errors: error.errors });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Delete a customer
+  app.delete("/api/customers/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const customer = await storage.getCustomerById(id);
+      
+      if (!customer) {
+        return res.status(404).json({ message: "Klant niet gevonden" });
+      }
+      
+      // Check if user belongs to the same organization as the customer
+      if (req.user!.organizationId !== customer.organizationId) {
+        return res.status(403).json({ message: "Geen toegang tot deze klant" });
+      }
+      
+      // Only allow admins to delete customers
+      if (req.user!.role !== "admin") {
+        return res.status(403).json({ message: "Alleen beheerders kunnen klanten verwijderen" });
+      }
+      
+      await storage.deleteCustomer(id);
+      res.json({ message: "Klant verwijderd" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

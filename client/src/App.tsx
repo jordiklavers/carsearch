@@ -10,6 +10,7 @@ import SearchHistoryPage from "@/pages/search-history-page";
 import AdminDevPage from "@/pages/admin-dev-page";
 import ProfilePage from "@/pages/profile-page";
 import OrganizationPage from "@/pages/organization-page";
+import CustomersPage from "@/pages/customers-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";
 
@@ -22,6 +23,7 @@ function Router() {
       <ProtectedRoute path="/history" component={SearchHistoryPage} />
       <ProtectedRoute path="/profile" component={ProfilePage} />
       <ProtectedRoute path="/organization" component={OrganizationPage} />
+      <ProtectedRoute path="/customers" component={CustomersPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/admin-dev" component={AdminDevPage} />
       <Route component={NotFound} />

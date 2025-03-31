@@ -181,3 +181,32 @@ export const insertSearchSchema = createInsertSchema(searches)
 
 export type InsertSearch = z.infer<typeof insertSearchSchema>;
 export type Search = typeof searches.$inferSelect;
+
+// Customer schema
+export const customers = pgTable("customers", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  address: text("address"),
+  city: text("city"),
+  zipCode: text("zip_code"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertCustomerSchema = createInsertSchema(customers)
+  .omit({ id: true, organizationId: true, createdAt: true, updatedAt: true })
+  .extend({
+    phone: z.string().optional(),
+    address: z.string().optional(),
+    city: z.string().optional(),
+    zipCode: z.string().optional(),
+    notes: z.string().optional(),
+  });
+
+export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
+export type Customer = typeof customers.$inferSelect;

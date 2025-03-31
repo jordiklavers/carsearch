@@ -8,7 +8,7 @@ export function MobileNav() {
 
   // Determine if we need to show the org menu for admins
   const showOrgMenu = user?.role === "admin" && user?.organizationId;
-  const menuItems = showOrgMenu ? 5 : 4;
+  const menuItems = showOrgMenu ? 6 : 5; // Added customers page
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-10">
@@ -40,6 +40,16 @@ export function MobileNav() {
           )}>
             <i className="fas fa-history text-lg"></i>
             <span className="text-xs mt-1">Geschiedenis</span>
+          </div>
+        </Link>
+        
+        <Link href="/customers">
+          <div className={cn(
+            "flex flex-col items-center p-2 cursor-pointer",
+            location === "/customers" ? "text-accent" : "text-slate-500"
+          )}>
+            <i className="fas fa-users text-lg"></i>
+            <span className="text-xs mt-1">Klanten</span>
           </div>
         </Link>
         
