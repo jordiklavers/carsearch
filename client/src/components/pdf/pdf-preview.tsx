@@ -2,15 +2,17 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Search } from "@shared/schema";
+import { CarLoading } from "@/components/ui/car-loading";
 
 interface PDFPreviewProps {
   open: boolean;
   onClose: () => void;
   search: Search | null;
   onDownload: () => void;
+  isDownloading?: boolean;
 }
 
-export function PDFPreview({ open, onClose, search, onDownload }: PDFPreviewProps) {
+export function PDFPreview({ open, onClose, search, onDownload, isDownloading = false }: PDFPreviewProps) {
   if (!search) return null;
 
   return (
@@ -119,10 +121,18 @@ export function PDFPreview({ open, onClose, search, onDownload }: PDFPreviewProp
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Sluiten</Button>
-          <Button onClick={onDownload}>
-            <i className="fas fa-download mr-2"></i>
-            Download PDF
+          <Button variant="outline" onClick={onClose} disabled={isDownloading}>
+            Sluiten
+          </Button>
+          <Button onClick={onDownload} disabled={isDownloading}>
+            {isDownloading ? (
+              <CarLoading size="sm" type="car" text="PDF genereren..." />
+            ) : (
+              <>
+                <i className="fas fa-download mr-2"></i>
+                Download PDF
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

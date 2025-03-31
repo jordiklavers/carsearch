@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CarLoading } from "@/components/ui/car-loading";
 import { 
   insertSearchSchema, 
   InsertSearch, 
@@ -42,6 +43,7 @@ export function SearchForm({ searchId }: SearchFormProps) {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
   const [currentSearch, setCurrentSearch] = useState<Search | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Fetch search data if editing
   const { data: searchData, isLoading: isLoadingSearch } = useQuery<Search>({
@@ -103,11 +105,13 @@ export function SearchForm({ searchId }: SearchFormProps) {
   // Download PDF mutation
   const downloadMutation = useMutation({
     mutationFn: async () => {
+      setIsDownloading(true);
       if (currentSearch) {
         await generatePDF(currentSearch);
       }
     },
     onSuccess: () => {
+      setIsDownloading(false);
       toast({
         title: "PDF gedownload",
         description: "De PDF is succesvol gedownload.",
@@ -116,6 +120,7 @@ export function SearchForm({ searchId }: SearchFormProps) {
       navigate("/");
     },
     onError: (error: Error) => {
+      setIsDownloading(false);
       toast({
         title: "Fout bij downloaden",
         description: `Er is een fout opgetreden: ${error.message}`,
@@ -197,6 +202,19 @@ export function SearchForm({ searchId }: SearchFormProps) {
     navigate("/");
   };
 
+  // Show loading state when fetching search data
+  if (isLoadingSearch) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center">
+        <CarLoading 
+          type="car" 
+          size="lg" 
+          text="Zoekopdracht laden..." 
+        />
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="flex items-center justify-between mb-6">
@@ -214,8 +232,17 @@ export function SearchForm({ searchId }: SearchFormProps) {
             form="search-form" 
             disabled={mutation.isPending}
           >
-            <i className="fas fa-file-pdf mr-2"></i>
-            {mutation.isPending ? "Bezig..." : "Opslaan & Voorbeeld"}
+            {mutation.isPending ? (
+              <>
+                <CarLoading type="car" size="sm" className="mr-2" />
+                <span>Bezig met opslaan...</span>
+              </>
+            ) : (
+              <>
+                <i className="fas fa-file-pdf mr-2"></i>
+                <span>Opslaan & Voorbeeld</span>
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -651,6 +678,7 @@ export function SearchForm({ searchId }: SearchFormProps) {
         onClose={() => setIsPdfPreviewOpen(false)} 
         search={currentSearch}
         onDownload={handleDownloadPDF}
+        isDownloading={downloadMutation.isPending}
       />
     </>
   );
