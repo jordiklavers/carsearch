@@ -630,6 +630,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: error.message });
     }
   });
+  
+  // Update user role (admin only)
+  app.patch("/api/users/:userId/role", isAuthenticated, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { role } = req.body;
+      
+      // Validate role
+      if (!userRoles.includes(role)) {
+        return res.status(400).json({ message: "Ongeldige rol" });
+      }
+      
+      // Get the target user
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "Gebruiker niet gevonden" });
+      }
+      
+      // Check permissions - only admins can change roles
+      if (req.user!.role !== "admin") {
+        return res.status(403).json({ message: "Onvoldoende rechten om rollen te wijzigen" });
+      }
+      
+      // Users can only update members of their own organization
+      if (req.user!.organizationId !== targetUser.organizationId) {
+        return res.status(403).json({ message: "Je kunt alleen rollen wijzigen binnen je eigen organisatie" });
+      }
+      
+      // Prevent users from changing their own role
+      if (req.user!.id === userId) {
+        return res.status(403).json({ message: "Je kunt je eigen rol niet wijzigen" });
+      }
+      
+      const updatedUser = await storage.updateUserRole(userId, role);
+      res.json(updatedUser);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   // Development routes for admin tools
   app.post("/api/dev/make-admin", async (req, res) => {

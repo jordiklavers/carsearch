@@ -52,7 +52,7 @@ export function SearchStats() {
         </CardContent>
         <div className="bg-slate-50 px-5 py-3">
           <div className="text-sm">
-            <a href="/history?status=active" className="font-medium text-secondary hover:text-secondary-hover">Bekijk alle</a>
+            <a href="/history?status=active" className="font-medium text-primary hover:text-primary/80">Bekijk alle</a>
           </div>
         </div>
       </Card>
@@ -76,7 +76,7 @@ export function SearchStats() {
         </CardContent>
         <div className="bg-slate-50 px-5 py-3">
           <div className="text-sm">
-            <a href="/history?status=completed" className="font-medium text-secondary hover:text-secondary-hover">Bekijk alle</a>
+            <a href="/history?status=completed" className="font-medium text-primary hover:text-primary/80">Bekijk alle</a>
           </div>
         </div>
       </Card>
@@ -100,7 +100,7 @@ export function SearchStats() {
         </CardContent>
         <div className="bg-slate-50 px-5 py-3">
           <div className="text-sm">
-            <a href="/history" className="font-medium text-secondary hover:text-secondary-hover">Bekijk alle</a>
+            <a href="/history" className="font-medium text-primary hover:text-primary/80">Bekijk alle</a>
           </div>
         </div>
       </Card>

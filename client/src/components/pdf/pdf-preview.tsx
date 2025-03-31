@@ -22,7 +22,7 @@ export function PDFPreview({ open, onClose, search, onDownload, isDownloading = 
           <DialogTitle>PDF Voorbeeld</DialogTitle>
         </DialogHeader>
         <div className="border-2 border-slate-100 rounded-lg p-1 w-full">
-          <div className="bg-slate-50 p-4 min-h-[500px] flex flex-col items-center justify-center">
+          <div className="bg-slate-50 p-4 max-h-[70vh] overflow-y-auto flex flex-col items-center justify-start">
             <div className="bg-white p-8 w-full max-w-2xl shadow-lg rounded">
               {/* Logo and Title */}
               <div className="flex justify-between mb-8">

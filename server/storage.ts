@@ -36,7 +36,7 @@ export interface IStorage {
   createOrganization(organization: InsertOrganization): Promise<Organization>;
   updateOrganization(id: number, organization: Partial<Organization>): Promise<Organization>;
   uploadOrganizationLogo(id: number, logoPath: string): Promise<Organization>;
-  getOrganizationIdCounter(): number; // Get the current organization ID counter for iteration
+  getOrganizationIdCounter(): number; // Get the current organization ID counter for iteration (not needed with database implementation)
   
   // Search operations
   getSearchesByUserId(userId: number): Promise<Search[]>;
@@ -350,15 +350,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const newUser = {
+    const [user] = await db.insert(users).values({
       ...insertUser,
       phone: null,
       profilePicture: null,
       organizationId: null,
       role: "member"
-    };
-    
-    const [user] = await db.insert(users).values(newUser).returning();
+    }).returning();
     return user;
   }
 
@@ -495,15 +493,10 @@ export class DatabaseStorage implements IStorage {
     return updatedOrg;
   }
   
-  async getOrganizationIdCounter(): number {
-    // Get the maximum organization ID in the database
-    const [result] = await db
-      .select({ maxId: organizations.id })
-      .from(organizations)
-      .orderBy(desc(organizations.id))
-      .limit(1);
-    
-    return result ? (result.maxId + 1) : 1;
+  getOrganizationIdCounter(): number {
+    // Note: This is no longer needed with auto-incrementing IDs in the database
+    // But keeping the method to maintain compatibility with the interface
+    return 0;
   }
 
   // Search operations
