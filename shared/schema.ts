@@ -185,17 +185,17 @@ export type Search = typeof searches.$inferSelect;
 // Customer schema
 export const customers = pgTable("customers", {
   id: serial("id").primaryKey(),
-  organizationId: integer("organization_id").notNull(),
-  firstName: text("first_name").notNull(),
-  lastName: text("last_name").notNull(),
+  organizationId: integer("organizationId").notNull(),
+  firstName: text("firstName").notNull(),
+  lastName: text("lastName").notNull(),
   email: text("email").notNull(),
   phone: text("phone"),
   address: text("address"),
   city: text("city"),
-  zipCode: text("zip_code"),
+  zipCode: text("zipCode"),
   notes: text("notes"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 });
 
 export const insertCustomerSchema = createInsertSchema(customers)
