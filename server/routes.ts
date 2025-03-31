@@ -555,6 +555,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Development routes for admin tools
+  app.post("/api/dev/make-admin", async (req, res) => {
+    try {
+      const { username } = req.body;
+      
+      if (!username) {
+        return res.status(400).json({ message: "Gebruikersnaam is vereist" });
+      }
+      
+      const user = await storage.getUserByUsername(username);
+      
+      if (!user) {
+        return res.status(404).json({ message: "Gebruiker niet gevonden" });
+      }
+      
+      // Update user role to admin
+      const updatedUser = await storage.updateUserRole(user.id, "admin");
+      
+      res.json({ 
+        message: `${username} heeft nu admin rechten`,
+        user: updatedUser
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

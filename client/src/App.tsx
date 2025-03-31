@@ -7,6 +7,7 @@ import DashboardPage from "@/pages/dashboard-page";
 import AuthPage from "@/pages/auth-page";
 import SearchFormPage from "@/pages/search-form-page";
 import SearchHistoryPage from "@/pages/search-history-page";
+import AdminDevPage from "@/pages/admin-dev-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";
 
@@ -18,6 +19,7 @@ function Router() {
       <ProtectedRoute path="/search/edit/:id" component={SearchFormPage} />
       <ProtectedRoute path="/history" component={SearchHistoryPage} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/admin-dev" component={AdminDevPage} />
       <Route component={NotFound} />
     </Switch>
   );

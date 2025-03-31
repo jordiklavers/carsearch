@@ -43,12 +43,21 @@ export function setupAuth(app: Express) {
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
+      console.log(`Attempting login for user: ${username}`);
       const user = await storage.getUserByUsername(username);
-      if (!user || !(await comparePasswords(password, user.password))) {
-        return done(null, false);
-      } else {
-        return done(null, user);
+      if (!user) {
+        console.log(`User not found: ${username}`);
+        return done(null, false, { message: "Incorrect username or password" });
       }
+      
+      const isValid = await comparePasswords(password, user.password);
+      console.log(`Password validation for ${username}: ${isValid ? "success" : "failed"}`);
+      
+      if (!isValid) {
+        return done(null, false, { message: "Incorrect username or password" });
+      }
+      
+      return done(null, user);
     }),
   );
 
@@ -75,8 +84,21 @@ export function setupAuth(app: Express) {
     });
   });
 
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    res.status(200).json(req.user);
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err: any, user: Express.User | false, info: { message: string } | undefined) => {
+      if (err) {
+        return next(err);
+      }
+      if (!user) {
+        return res.status(401).json({ message: info?.message || "Authentication failed" });
+      }
+      req.logIn(user, (err: any) => {
+        if (err) {
+          return next(err);
+        }
+        return res.status(200).json(user);
+      });
+    })(req, res, next);
   });
 
   app.post("/api/logout", (req, res, next) => {
@@ -90,4 +112,44 @@ export function setupAuth(app: Express) {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     res.json(req.user);
   });
+  
+  // DEV ONLY: Endpoint to set admin permissions for development
+  if (process.env.NODE_ENV !== "production") {
+    app.post("/api/dev/make-admin", async (req, res) => {
+      try {
+        const { username } = req.body;
+        if (!username) {
+          return res.status(400).json({ message: "Username is required" });
+        }
+        
+        const user = await storage.getUserByUsername(username);
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
+        
+        // If user is not part of an organization, create one and assign them
+        if (!user.organizationId) {
+          const org = await storage.createOrganization({
+            name: `${username}'s Organization`,
+            pdfPrimaryColor: "#4a6da7",
+            pdfSecondaryColor: "#333333",
+            pdfCompanyName: "Dev Organization",
+            pdfContactInfo: "Development Contact Info"
+          });
+          
+          await storage.assignUserToOrganization(user.id, org.id);
+        }
+        
+        // Make user an admin
+        const updatedUser = await storage.updateUserRole(user.id, "admin");
+        
+        res.json({ 
+          message: "User has been made an admin", 
+          user: updatedUser
+        });
+      } catch (error: any) {
+        res.status(500).json({ message: error.message });
+      }
+    });
+  }
 }
