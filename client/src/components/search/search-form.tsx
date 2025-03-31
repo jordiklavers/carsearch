@@ -5,6 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
+import { z } from "zod";
 import { 
   Form, 
   FormControl, 
@@ -18,6 +20,15 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CarLoading } from "@/components/ui/car-loading";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { 
   insertSearchSchema, 
   InsertSearch, 
@@ -27,7 +38,10 @@ import {
   carColors, 
   transmissionTypes, 
   fuelTypes,
-  searchStatuses
+  searchStatuses,
+  Customer,
+  InsertCustomer,
+  insertCustomerSchema
 } from "@shared/schema";
 import { uploadImages } from "@/lib/file-upload";
 import { PDFPreview } from "@/components/pdf/pdf-preview";
@@ -39,16 +53,25 @@ interface SearchFormProps {
 
 export function SearchForm({ searchId }: SearchFormProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [, navigate] = useLocation();
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
   const [currentSearch, setCurrentSearch] = useState<Search | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isNewCustomerDialogOpen, setIsNewCustomerDialogOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   // Fetch search data if editing
   const { data: searchData, isLoading: isLoadingSearch } = useQuery<Search>({
     queryKey: searchId ? [`/api/searches/${searchId}`] : [],
     enabled: !!searchId,
+  });
+  
+  // Fetch customers for the organization
+  const { data: customers = [], isLoading: isLoadingCustomers } = useQuery<Customer[]>({
+    queryKey: user?.organizationId ? ["/api/customers"] : [],
+    enabled: !!user?.organizationId,
   });
 
   // Create/Update search mutation
@@ -201,6 +224,69 @@ export function SearchForm({ searchId }: SearchFormProps) {
   const handleCancel = () => {
     navigate("/");
   };
+  
+  // Create customer form
+  const customerForm = useForm<z.infer<typeof insertCustomerSchema>>({
+    resolver: zodResolver(insertCustomerSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      address: "",
+      city: "",
+      zipCode: "",
+      notes: ""
+    }
+  });
+  
+  // Create customer mutation
+  const createCustomerMutation = useMutation({
+    mutationFn: async (data: InsertCustomer) => {
+      const res = await apiRequest("POST", "/api/customers", data);
+      return await res.json();
+    },
+    onSuccess: (customer: Customer) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      setSelectedCustomer(customer);
+      setIsNewCustomerDialogOpen(false);
+      
+      // Fill in customer details in the search form
+      form.setValue("customerFirstName", customer.firstName);
+      form.setValue("customerLastName", customer.lastName);
+      form.setValue("customerEmail", customer.email);
+      form.setValue("customerPhone", customer.phone || "");
+      
+      toast({
+        title: "Klant aangemaakt",
+        description: `Klant ${customer.firstName} ${customer.lastName} is succesvol aangemaakt.`,
+      });
+      
+      // Reset the customer form
+      customerForm.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Fout bij aanmaken klant",
+        description: `Er is een fout opgetreden: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Handle customer selection
+  const handleSelectCustomer = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    form.setValue("customerFirstName", customer.firstName);
+    form.setValue("customerLastName", customer.lastName);
+    form.setValue("customerEmail", customer.email);
+    form.setValue("customerPhone", customer.phone || "");
+  };
+  
+  // Handle new customer form submission
+  const onCreateCustomerSubmit = (data: InsertCustomer) => {
+    createCustomerMutation.mutate(data);
+  };
 
   // Show loading state when fetching search data
   if (isLoadingSearch) {
@@ -253,8 +339,48 @@ export function SearchForm({ searchId }: SearchFormProps) {
           <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
             <div className="px-4 py-5 sm:px-6 border-b border-slate-200">
               <h3 className="text-lg font-medium leading-6 text-slate-900">Klantgegevens</h3>
-              <p className="mt-1 text-sm text-slate-500">Vul de gegevens van de klant in.</p>
+              <p className="mt-1 text-sm text-slate-500">
+                Vul de gegevens van de klant in of selecteer een bestaande klant.
+              </p>
             </div>
+            
+            {/* Customer Selection */}
+            {user?.organizationId && (
+              <div className="px-4 py-3 sm:px-6 border-b border-slate-200 bg-slate-50">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-slate-700">Bestaande klant selecteren:</span>
+                  <div className="flex-1 flex-wrap flex gap-2">
+                    {isLoadingCustomers ? (
+                      <span className="text-sm text-slate-500">Klanten laden...</span>
+                    ) : customers.length === 0 ? (
+                      <span className="text-sm text-slate-500">Geen klanten gevonden</span>
+                    ) : (
+                      customers.map(customer => (
+                        <Button 
+                          key={customer.id}
+                          type="button"
+                          variant={selectedCustomer?.id === customer.id ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleSelectCustomer(customer)}
+                          className="text-xs"
+                        >
+                          {customer.firstName} {customer.lastName}
+                        </Button>
+                      ))
+                    )}
+                  </div>
+                  <Button 
+                    type="button" 
+                    variant="secondary" 
+                    size="sm"
+                    onClick={() => setIsNewCustomerDialogOpen(true)}
+                  >
+                    + Nieuwe klant
+                  </Button>
+                </div>
+              </div>
+            )}
+            
             <div className="px-4 py-5 sm:p-6">
               <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                 <div className="sm:col-span-3">
@@ -732,6 +858,160 @@ export function SearchForm({ searchId }: SearchFormProps) {
         onDownload={handleDownloadPDF}
         isDownloading={downloadMutation.isPending}
       />
+      
+      {/* Create New Customer Dialog */}
+      <Dialog open={isNewCustomerDialogOpen} onOpenChange={setIsNewCustomerDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Nieuwe klant toevoegen</DialogTitle>
+            <DialogDescription>
+              Voeg een nieuwe klant toe aan uw organisatie. Deze wordt direct geselecteerd voor deze zoekopdracht.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...customerForm}>
+            <form onSubmit={customerForm.handleSubmit(onCreateCustomerSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={customerForm.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Voornaam</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={customerForm.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Achternaam</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={customerForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={customerForm.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telefoonnummer</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={customerForm.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Adres</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <FormField
+                    control={customerForm.control}
+                    name="zipCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Postcode</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={customerForm.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Plaats</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+              
+              <FormField
+                control={customerForm.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notities</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} placeholder="Optionele notities over deze klant" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsNewCustomerDialogOpen(false)}
+                >
+                  Annuleren
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createCustomerMutation.isPending}
+                >
+                  {createCustomerMutation.isPending ? (
+                    <>Bezig met opslaan...</>
+                  ) : (
+                    <>Klant toevoegen</>
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

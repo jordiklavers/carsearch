@@ -27,8 +27,8 @@ export default function SearchFormPage() {
         <MobileNav />
 
         {/* Main Content Area */}
-        <main className="flex-1 bg-slate-50 pb-16 md:pb-0">
-          <div className="py-6 px-4 sm:px-6 lg:px-8">
+        <main className="flex-1 bg-slate-50 pb-16 md:pb-0 overflow-auto">
+          <div className="py-6 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
             <SearchForm searchId={id} />
           </div>
         </main>
