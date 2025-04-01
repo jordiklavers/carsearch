@@ -10,7 +10,6 @@ import {
   Card, 
   CardContent, 
   CardDescription, 
-  CardFooter, 
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
@@ -26,10 +25,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
-import { Loader2, UserCircle, Upload } from "lucide-react";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Header } from "@/components/layout/header";
-import { MobileNav } from "@/components/layout/mobile-nav";
+import { Loader2, Upload } from "lucide-react";
 
 // Form schema for profile update
 const profileFormSchema = updateUserProfileSchema.pick({
@@ -51,7 +47,6 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
     user?.profilePicture ? `/api/images/${user.profilePicture}` : null
   );
@@ -66,10 +61,6 @@ export default function ProfilePage() {
       phone: user?.phone || "",
     },
   });
-
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
 
   const onSubmit = async (data: ProfileFormValues) => {
     setIsSubmitting(true);
@@ -155,153 +146,136 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Sidebar - Hidden on mobile */}
-      <Sidebar />
+    <div className="py-6 px-4 sm:px-6 lg:px-8">
+      <h1 className="text-2xl font-bold mb-6">Mijn Profiel</h1>
       
-      {/* Main Content */}
-      <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Header */}
-        <Header toggleMobileMenu={toggleMobileMenu} />
-        
-        {/* Mobile Nav - Fixed to bottom */}
-        <MobileNav />
-        
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto bg-slate-50 pb-16 md:pb-0">
-          <div className="py-6 px-4 sm:px-6 lg:px-8">
-            <h1 className="text-2xl font-bold mb-6">Mijn Profiel</h1>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Profile Picture Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Profielfoto</CardTitle>
+            <CardDescription>
+              Upload een nieuwe profielfoto
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center">
+            <Avatar className="w-32 h-32 mb-6">
+              <AvatarImage src={avatarUrl || ""} alt={user?.username} />
+              <AvatarFallback className="text-2xl">
+                {isUploading ? <Loader2 className="h-6 w-6 animate-spin" /> : getInitials()}
+              </AvatarFallback>
+            </Avatar>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Profile Picture Card */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Profielfoto</CardTitle>
-                  <CardDescription>
-                    Upload een nieuwe profielfoto
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center">
-                  <Avatar className="w-32 h-32 mb-6">
-                    <AvatarImage src={avatarUrl || ""} alt={user?.username} />
-                    <AvatarFallback className="text-2xl">
-                      {isUploading ? <Loader2 className="h-6 w-6 animate-spin" /> : getInitials()}
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  <Label 
-                    htmlFor="profile-picture" 
-                    className="cursor-pointer flex items-center justify-center gap-2 bg-muted py-2 px-4 rounded-md hover:bg-muted/80 transition-colors"
-                  >
-                    <Upload size={18} />
-                    <span>Kies een afbeelding</span>
-                  </Label>
-                  <Input 
-                    id="profile-picture" 
-                    type="file" 
-                    className="hidden" 
-                    accept="image/*"
-                    onChange={handleProfilePictureChange}
-                    disabled={isUploading}
+            <Label 
+              htmlFor="profile-picture" 
+              className="cursor-pointer flex items-center justify-center gap-2 bg-muted py-2 px-4 rounded-md hover:bg-muted/80 transition-colors"
+            >
+              <Upload size={18} />
+              <span>Kies een afbeelding</span>
+            </Label>
+            <Input 
+              id="profile-picture" 
+              type="file" 
+              className="hidden" 
+              accept="image/*"
+              onChange={handleProfilePictureChange}
+              disabled={isUploading}
+            />
+            <p className="text-sm text-muted-foreground mt-2">
+              JPEG, PNG of GIF, max 5MB
+            </p>
+          </CardContent>
+        </Card>
+        
+        {/* Profile Details Card */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle>Persoonlijke Gegevens</CardTitle>
+            <CardDescription>
+              Werk uw persoonlijke gegevens bij
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Voornaam</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Uw voornaam" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    JPEG, PNG of GIF, max 5MB
-                  </p>
-                </CardContent>
-              </Card>
-              
-              {/* Profile Details Card */}
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle>Persoonlijke Gegevens</CardTitle>
-                  <CardDescription>
-                    Werk uw persoonlijke gegevens bij
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="firstName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Voornaam</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Uw voornaam" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="lastName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Achternaam</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Uw achternaam" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>E-mailadres</FormLabel>
-                            <FormControl>
-                              <Input placeholder="uw@email.nl" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Telefoonnummer</FormLabel>
-                            <FormControl>
-                              <Input placeholder="06-12345678" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <div className="col-span-2 pt-2">
-                        <Button
-                          type="submit"
-                          disabled={isSubmitting}
-                          className="w-full md:w-auto"
-                        >
-                          {isSubmitting ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Opslaan...
-                            </>
-                          ) : (
-                            "Profiel Opslaan"
-                          )}
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </main>
+                  
+                  <FormField
+                    control={form.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Achternaam</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Uw achternaam" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>E-mailadres</FormLabel>
+                      <FormControl>
+                        <Input placeholder="uw@email.nl" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefoonnummer</FormLabel>
+                      <FormControl>
+                        <Input placeholder="06-12345678" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="col-span-2 pt-2">
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full md:w-auto"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Opslaan...
+                      </>
+                    ) : (
+                      "Profiel Opslaan"
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

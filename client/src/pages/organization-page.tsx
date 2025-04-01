@@ -18,9 +18,6 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { CarLoading } from "@/components/ui/car-loading";
 import { useAuth } from "@/hooks/use-auth";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Header } from "@/components/layout/header";
-import { MobileNav } from "@/components/layout/mobile-nav";
 
 export default function OrganizationPage() {
   const { user } = useAuth();
@@ -205,70 +202,51 @@ export default function OrganizationPage() {
   };
 
   if (orgLoading) {
-    return <CarLoading fullscreen text="Organisatie gegevens laden..." />;
+    return (
+      <div className="py-6 px-4 sm:px-6 lg:px-8 flex justify-center items-center min-h-[60vh]">
+        <CarLoading text="Organisatie gegevens laden..." />
+      </div>
+    );
   }
 
   if (!organization && !orgLoading) {
     return (
-      <div className="flex h-screen overflow-hidden">
-        <Sidebar />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <Header toggleMobileMenu={toggleMobileMenu} />
-          <MobileNav />
-          <main className="flex-1 overflow-y-auto bg-slate-50 pb-16 md:pb-0">
-            <div className="container mx-auto py-10">
-              <Card className="max-w-lg mx-auto">
-                <CardHeader>
-                  <CardTitle>Geen organisatie gevonden</CardTitle>
-                  <CardDescription>
-                    Je bent nog niet toegewezen aan een organisatie. Neem contact op
-                    met een beheerder om toegang te krijgen.
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </div>
-          </main>
-        </div>
+      <div className="py-6 px-4 sm:px-6 lg:px-8">
+        <Card className="max-w-lg mx-auto">
+          <CardHeader>
+            <CardTitle>Geen organisatie gevonden</CardTitle>
+            <CardDescription>
+              Je bent nog niet toegewezen aan een organisatie. Neem contact op
+              met een beheerder om toegang te krijgen.
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Sidebar - Hidden on mobile */}
-      <Sidebar />
+    <div className="py-6 px-4 sm:px-6 lg:px-8">
+      <h1 className="text-2xl font-bold mb-6">Organisatie Beheer</h1>
       
-      {/* Main Content */}
-      <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Header */}
-        <Header toggleMobileMenu={toggleMobileMenu} />
-        
-        {/* Mobile Nav - Fixed to bottom */}
-        <MobileNav />
-        
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto bg-slate-50 pb-16 md:pb-0">
-          <div className="py-6 px-4 sm:px-6 lg:px-8">
-            <h1 className="text-2xl font-bold mb-6">Organisatie Beheer</h1>
-            
-            <Tabs defaultValue="general">
-              <TabsList className="mb-4">
-                <TabsTrigger value="general">Algemeen</TabsTrigger>
-                <TabsTrigger value="branding">Huisstijl</TabsTrigger>
-                {user?.role === "admin" && (
-                  <TabsTrigger value="members">Leden</TabsTrigger>
-                )}
-              </TabsList>
+      <Tabs defaultValue="general">
+        <TabsList className="mb-4">
+          <TabsTrigger value="general">Algemeen</TabsTrigger>
+          <TabsTrigger value="branding">Huisstijl</TabsTrigger>
+          {user?.role === "admin" && (
+            <TabsTrigger value="members">Leden</TabsTrigger>
+          )}
+        </TabsList>
 
-              {/* General tab */}
-              <TabsContent value="general">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Algemene Informatie</CardTitle>
-                    <CardDescription>
-                      Beheer de algemene gegevens van je organisatie.
-                    </CardDescription>
-                  </CardHeader>
+        {/* General tab */}
+        <TabsContent value="general">
+          <Card>
+            <CardHeader>
+              <CardTitle>Algemene Informatie</CardTitle>
+              <CardDescription>
+                Beheer de algemene gegevens van je organisatie.
+              </CardDescription>
+            </CardHeader>
                   <CardContent>
                     <form id="generalForm" onSubmit={handleGeneralSubmit}>
                       <div className="grid gap-6 mb-6">
@@ -346,7 +324,10 @@ export default function OrganizationPage() {
                       disabled={updateOrgMutation.isPending}
                     >
                       {updateOrgMutation.isPending ? (
-                        <CarLoading size="sm" type="spinner" text="Opslaan..." />
+                        <span className="flex items-center">
+                          <span className="mr-2 h-4 w-4 animate-spin">⏳</span>
+                          Opslaan...
+                        </span>
                       ) : (
                         "Opslaan"
                       )}

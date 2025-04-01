@@ -245,9 +245,9 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="py-6 px-4 sm:px-6 lg:px-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Klanten</h1>
+        <h1 className="text-2xl font-bold">Klanten</h1>
         <Button onClick={handleOpenAddDialog}>
           <Plus className="mr-2 h-4 w-4" /> Nieuwe Klant
         </Button>
