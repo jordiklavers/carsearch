@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface SearchResponse {
   searches: Search[];
@@ -25,14 +26,14 @@ export function SearchStats() {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-        {[1, 2, 3].map((i) => (
-          <Card key={i} className="bg-white shadow rounded-lg overflow-hidden">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i}>
             <CardContent className="p-5">
-              <div className="animate-pulse flex items-center">
-                <div className="h-12 w-12 rounded-md bg-slate-200"></div>
-                <div className="ml-5 space-y-2 w-full">
-                  <div className="h-4 bg-slate-200 rounded w-3/4"></div>
-                  <div className="h-6 bg-slate-200 rounded w-1/4"></div>
+              <div className="flex items-center space-x-4">
+                <Skeleton className="h-12 w-12 rounded-md" />
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-6 w-1/4" />
                 </div>
               </div>
             </CardContent>
