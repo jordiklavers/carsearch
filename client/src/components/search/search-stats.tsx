@@ -1,10 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+
+interface SearchResponse {
+  searches: Search[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
 
 export function SearchStats() {
-  const { data: searches, isLoading } = useQuery<Search[]>({
+  const { data, isLoading } = useQuery<SearchResponse>({
     queryKey: ["/api/searches"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/searches");
+      return res.json();
+    },
   });
 
   if (isLoading) {
@@ -28,10 +43,10 @@ export function SearchStats() {
   }
 
   const activeSearches =
-    searches?.filter((s) => s.status === "active").length || 0;
+    data?.searches?.filter((s) => s.status === "active").length || 0;
   const completedSearches =
-    searches?.filter((s) => s.status === "completed").length || 0;
-  const totalPDFs = searches?.length || 0; // Assuming each search has a PDF
+    data?.searches?.filter((s) => s.status === "completed").length || 0;
+  const totalPDFs = data?.pagination.total || 0;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">

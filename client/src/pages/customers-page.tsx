@@ -3,7 +3,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Customer, InsertCustomer, insertCustomerSchema } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { cn, formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -317,7 +318,7 @@ export default function CustomersPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center">
-                          <span className="text-sm">{formatDate(customer.createdAt)}</span>
+                          <span className="text-sm">{format(customer.createdAt, 'dd-MM-yyyy')}</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-right">

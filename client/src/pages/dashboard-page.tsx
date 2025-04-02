@@ -12,7 +12,7 @@ export default function DashboardPage() {
   return (
     <div className="py-6 px-4 sm:px-6 lg:px-8">
       {/* Dashboard */}
-      <div className="mb-8">
+      <div className="container mx-auto mb-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
           <h1 className="text-2xl font-semibold text-slate-900">Dashboard</h1>
           
@@ -49,7 +49,7 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-          <SearchList statusFilter={statusFilter} />
+          <SearchList statusFilter={statusFilter as "all" | "active" | "completed"} />
         </div>
       </div>
     </div>

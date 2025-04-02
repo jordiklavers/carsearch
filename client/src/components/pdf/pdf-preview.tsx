@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Search } from "@shared/schema";
 import { CarLoading } from "@/components/ui/car-loading";
+import { useQuery } from "@tanstack/react-query";
+import { Organization } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 
 interface PDFPreviewProps {
   open: boolean;
@@ -13,6 +16,21 @@ interface PDFPreviewProps {
 }
 
 export function PDFPreview({ open, onClose, search, onDownload, isDownloading = false }: PDFPreviewProps) {
+  const { user } = useAuth();
+  
+  // Fetch organization data
+  const { data: organization } = useQuery<Organization>({
+    queryKey: user?.organizationId ? ["/api/organizations", user.organizationId] : [],
+    queryFn: async () => {
+      if (!user?.organizationId) return null;
+      const res = await fetch(`/api/organizations/${user.organizationId}`);
+      if (!res.ok) throw new Error("Failed to load organization");
+      return await res.json();
+    },
+    enabled: !!user?.organizationId,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
   if (!search) return null;
 
   return (
@@ -26,8 +44,16 @@ export function PDFPreview({ open, onClose, search, onDownload, isDownloading = 
             <div className="bg-white p-8 w-full max-w-2xl shadow-lg rounded">
               {/* Logo and Title */}
               <div className="flex justify-between mb-8">
-                <div className="h-12 w-32 bg-primary rounded-md flex items-center justify-center text-white font-bold">
-                  LOGO
+                <div className="h-12 w-32 bg-primary rounded-md flex items-center justify-center">
+                  {organization?.logo ? (
+                    <img 
+                      src={`/api/images/${organization.logo}`}
+                      alt={organization.name}
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <span className="text-white font-bold">LOGO</span>
+                  )}
                 </div>
                 <div className="text-right">
                   <h2 className="text-xl font-semibold text-slate-900">Zoekopdracht</h2>
@@ -126,7 +152,7 @@ export function PDFPreview({ open, onClose, search, onDownload, isDownloading = 
           </Button>
           <Button onClick={onDownload} disabled={isDownloading}>
             {isDownloading ? (
-              <CarLoading size="sm" type="car" text="PDF genereren..." />
+              <CarLoading text="PDF genereren..." />
             ) : (
               <>
                 <i className="fas fa-download mr-2"></i>

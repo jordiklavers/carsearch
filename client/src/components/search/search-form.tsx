@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
@@ -66,7 +66,65 @@ export function SearchForm({ searchId }: SearchFormProps) {
   const { data: searchData, isLoading: isLoadingSearch } = useQuery<Search>({
     queryKey: searchId ? [`/api/searches/${searchId}`] : [],
     enabled: !!searchId,
+    gcTime: 0,
+    refetchOnMount: true,
   });
+
+  // Form setup with default values
+  const form = useForm<InsertSearch>({
+    resolver: zodResolver(insertSearchSchema),
+    defaultValues: {
+      customerFirstName: "",
+      customerLastName: "",
+      customerEmail: "",
+      customerPhone: "",
+      carMake: "",
+      carModel: "",
+      carType: "",
+      carYear: "",
+      carColor: "",
+      carTransmission: "",
+      carFuel: "",
+      minPrice: 0,
+      maxPrice: 0,
+      additionalRequirements: "",
+      status: "active",
+    }
+  });
+
+  // Populate form when editing and data is loaded
+  useEffect(() => {
+    if (searchData) {
+      console.log('Populating form with search data:', searchData);
+      form.reset({
+        customerFirstName: searchData.customerFirstName,
+        customerLastName: searchData.customerLastName,
+        customerEmail: searchData.customerEmail,
+        customerPhone: searchData.customerPhone,
+        carMake: searchData.carMake,
+        carModel: searchData.carModel,
+        carType: searchData.carType,
+        carYear: searchData.carYear,
+        carColor: searchData.carColor,
+        carTransmission: searchData.carTransmission,
+        carFuel: searchData.carFuel,
+        minPrice: searchData.minPrice,
+        maxPrice: searchData.maxPrice,
+        additionalRequirements: searchData.additionalRequirements ?? "",
+        status: searchData.status
+      });
+    }
+  }, [searchData, form]);
+
+  // Add debug logging for the query state
+  useEffect(() => {
+    console.log('Query state:', {
+      searchId,
+      isLoading: isLoadingSearch,
+      hasData: !!searchData,
+      data: searchData
+    });
+  }, [searchId, isLoadingSearch, searchData]);
   
   // Fetch customers for the organization
   const { data: customers = [], isLoading: isLoadingCustomers } = useQuery<Customer[]>({
@@ -150,51 +208,6 @@ export function SearchForm({ searchId }: SearchFormProps) {
         variant: "destructive",
       });
     },
-  });
-
-  // Form setup
-  const form = useForm<InsertSearch>({
-    resolver: zodResolver(insertSearchSchema),
-    defaultValues: {
-      customerFirstName: "",
-      customerLastName: "",
-      customerEmail: "",
-      customerPhone: "",
-      carMake: "",
-      carModel: "",
-      carType: "",
-      carYear: "",
-      carColor: "",
-      carTransmission: "",
-      carFuel: "",
-      minPrice: 0,
-      maxPrice: 0,
-      additionalRequirements: "",
-      status: "active",
-    },
-  });
-
-  // Populate form when editing and data is loaded
-  useState(() => {
-    if (searchData && !form.formState.isDirty) {
-      form.reset({
-        customerFirstName: searchData.customerFirstName || "",
-        customerLastName: searchData.customerLastName || "",
-        customerEmail: searchData.customerEmail || "",
-        customerPhone: searchData.customerPhone || "",
-        carMake: searchData.carMake || "",
-        carModel: searchData.carModel || "",
-        carType: searchData.carType || "",
-        carYear: searchData.carYear || "",
-        carColor: searchData.carColor || "",
-        carTransmission: searchData.carTransmission || "",
-        carFuel: searchData.carFuel || "",
-        minPrice: searchData.minPrice || 0,
-        maxPrice: searchData.maxPrice || 0,
-        additionalRequirements: searchData.additionalRequirements || "",
-        status: searchData.status || "active",
-      });
-    }
   });
 
   // Handle form submission
@@ -290,19 +303,15 @@ export function SearchForm({ searchId }: SearchFormProps) {
 
   // Show loading state when fetching search data
   if (isLoadingSearch) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center">
-        <CarLoading 
-          type="car" 
-          size="lg" 
-          text="Zoekopdracht laden..." 
-        />
+    return ( 
+      <div className="flex items-center justify-center py-12">
+        <CarLoading text="Zoekopdracht laden..." />
       </div>
     );
   }
 
   return (
-    <>
+    <div className="flex flex-col min-h-0">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold text-slate-900">
           {searchId ? "Zoekopdracht Bewerken" : "Nieuwe Zoekopdracht"}
@@ -320,13 +329,13 @@ export function SearchForm({ searchId }: SearchFormProps) {
           >
             {mutation.isPending ? (
               <>
-                <CarLoading type="car" size="sm" className="mr-2" />
+                <CarLoading className="mr-2" />
                 <span>Bezig met opslaan...</span>
               </>
             ) : (
               <>
-                <i className="fas fa-file-pdf mr-2"></i>
-                <span>Opslaan & Voorbeeld</span>
+                <i className="fas fa-save mr-2"></i>
+                <span>Opslaan</span>
               </>
             )}
           </Button>
@@ -334,470 +343,476 @@ export function SearchForm({ searchId }: SearchFormProps) {
       </div>
       
       <Form {...form}>
-        <form id="search-form" onSubmit={form.handleSubmit(onSubmit)}>
-          {/* Customer Details Section */}
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
-            <div className="px-4 py-5 sm:px-6 border-b border-slate-200">
-              <h3 className="text-lg font-medium leading-6 text-slate-900">Klantgegevens</h3>
-              <p className="mt-1 text-sm text-slate-500">
-                Vul de gegevens van de klant in of selecteer een bestaande klant.
-              </p>
-            </div>
-            
-            {/* Customer Selection */}
-            {user?.organizationId && (
-              <div className="px-4 py-3 sm:px-6 border-b border-slate-200 bg-slate-50">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-medium text-slate-700">Bestaande klant selecteren:</span>
-                  <div className="flex-1 flex-wrap flex gap-2">
-                    {isLoadingCustomers ? (
-                      <span className="text-sm text-slate-500">Klanten laden...</span>
-                    ) : customers.length === 0 ? (
-                      <span className="text-sm text-slate-500">Geen klanten gevonden</span>
-                    ) : (
-                      customers.map(customer => (
-                        <Button 
-                          key={customer.id}
-                          type="button"
-                          variant={selectedCustomer?.id === customer.id ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => handleSelectCustomer(customer)}
-                          className="text-xs"
-                        >
-                          {customer.firstName} {customer.lastName}
-                        </Button>
-                      ))
-                    )}
-                  </div>
-                  <Button 
-                    type="button" 
-                    variant="secondary" 
-                    size="sm"
-                    onClick={() => setIsNewCustomerDialogOpen(true)}
-                  >
-                    + Nieuwe klant
-                  </Button>
-                </div>
+        <form 
+          id="search-form" 
+          onSubmit={form.handleSubmit(onSubmit)} 
+          className="flex flex-col min-h-0"
+        >
+          <div className="flex-1 space-y-4 overflow-y-auto">
+            {/* Customer Details Section */}
+            <div className="bg-white shadow sm:rounded-lg">
+              <div className="px-4 py-5 sm:px-6 border-b border-slate-200">
+                <h3 className="text-lg font-medium leading-6 text-slate-900">Klantgegevens</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Vul de gegevens van de klant in of selecteer een bestaande klant.
+                </p>
               </div>
-            )}
-            
-            <div className="px-4 py-5 sm:p-6">
-              <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                <div className="sm:col-span-3">
-                  <FormField
-                    control={form.control}
-                    name="customerFirstName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Voornaam</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <div className="sm:col-span-3">
-                  <FormField
-                    control={form.control}
-                    name="customerLastName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Achternaam</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <div className="sm:col-span-3">
-                  <FormField
-                    control={form.control}
-                    name="customerEmail"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input type="email" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <div className="sm:col-span-3">
-                  <FormField
-                    control={form.control}
-                    name="customerPhone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Telefoonnummer</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Car Details Section */}
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
-            <div className="px-4 py-5 sm:px-6 border-b border-slate-200">
-              <h3 className="text-lg font-medium leading-6 text-slate-900">Auto Details</h3>
-              <p className="mt-1 text-sm text-slate-500">Specificeer de gewenste auto.</p>
-            </div>
-            <div className="px-4 py-5 sm:p-6">
-              <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                <div className="sm:col-span-3">
-                  <FormField
-                    control={form.control}
-                    name="carMake"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Merk</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecteer merk" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {carMakes.map(make => (
-                              <SelectItem key={make} value={make}>{make}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <div className="sm:col-span-3">
-                  <FormField
-                    control={form.control}
-                    name="carModel"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Model</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Bijv. X5, A4, C-Klasse" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <div className="sm:col-span-2">
-                  <FormField
-                    control={form.control}
-                    name="carType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Type</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecteer type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {carTypes.map(type => (
-                              <SelectItem key={type} value={type}>{type}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <div className="sm:col-span-2">
-                  <FormField
-                    control={form.control}
-                    name="carYear"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Bouwjaar</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Bijv. 2022 of 2020-2022" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <div className="sm:col-span-2">
-                  <FormField
-                    control={form.control}
-                    name="carColor"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Kleur</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecteer kleur" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {carColors.map(color => (
-                              <SelectItem key={color} value={color}>{color}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <div className="sm:col-span-3">
-                  <FormField
-                    control={form.control}
-                    name="carTransmission"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Transmissie</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecteer transmissie" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {transmissionTypes.map(type => (
-                              <SelectItem key={type} value={type}>{type}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <div className="sm:col-span-3">
-                  <FormField
-                    control={form.control}
-                    name="carFuel"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Brandstof</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecteer brandstof" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {fuelTypes.map(type => (
-                              <SelectItem key={type} value={type}>{type}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <div className="sm:col-span-3">
-                  <FormField
-                    control={form.control}
-                    name="minPrice"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Minimale prijs (€)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <div className="sm:col-span-3">
-                  <FormField
-                    control={form.control}
-                    name="maxPrice"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Maximale prijs (€)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <div className="sm:col-span-6">
-                  <FormField
-                    control={form.control}
-                    name="additionalRequirements"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Aanvullende eisen</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            {...field} 
-                            rows={3}
-                            placeholder="Beschrijf eventuele specifieke wensen of eisen voor deze auto"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                        <p className="mt-2 text-sm text-slate-500">Beschrijf eventuele specifieke wensen of eisen voor deze auto.</p>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Status Section */}
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
-            <div className="px-4 py-5 sm:px-6 border-b border-slate-200">
-              <h3 className="text-lg font-medium leading-6 text-slate-900">Status</h3>
-              <p className="mt-1 text-sm text-slate-500">Pas de status van deze zoekopdracht aan.</p>
-            </div>
-            <div className="px-4 py-5 sm:p-6">
-              <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                <div className="sm:col-span-3">
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecteer status" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {searchStatuses.map(status => (
-                              <SelectItem key={status} value={status}>
-                                {status === "active" ? "Actief" : 
-                                 status === "completed" ? "Afgerond" : 
-                                 status === "cancelled" ? "Geannuleerd" : status}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        <p className="mt-2 text-sm text-slate-500">
-                          Actief: Zoekopdracht is lopend. Afgerond: Auto is gevonden. Geannuleerd: Zoektocht gestopt.
-                        </p>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Images Section */}
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
-            <div className="px-4 py-5 sm:px-6 border-b border-slate-200">
-              <h3 className="text-lg font-medium leading-6 text-slate-900">Foto's</h3>
-              <p className="mt-1 text-sm text-slate-500">Upload foto's van de gewenste auto.</p>
-            </div>
-            <div className="px-4 py-5 sm:p-6">
-              <div className="grid grid-cols-1 gap-y-6 sm:grid-cols-2 gap-x-4 md:grid-cols-3 lg:grid-cols-4">
-                {/* Image Upload Button */}
-                <label className="border-2 border-dashed border-slate-300 rounded-lg p-4 flex flex-col items-center justify-center h-48 cursor-pointer hover:border-secondary hover:bg-slate-50">
-                  <i className="fas fa-plus text-slate-400 text-2xl mb-2"></i>
-                  <span className="text-sm text-slate-500">Upload foto</span>
-                  <input 
-                    type="file" 
-                    className="hidden" 
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    multiple
-                  />
-                </label>
-                
-                {/* Display uploaded images */}
-                {imageFiles.map((file, index) => (
-                  <div key={index} className="relative border border-slate-300 rounded-lg overflow-hidden h-48">
-                    <img 
-                      src={URL.createObjectURL(file)} 
-                      alt={`Uploaded ${index + 1}`} 
-                      className="w-full h-full object-cover"
-                    />
-                    <button 
-                      type="button"
-                      onClick={() => handleRemoveImage(index)}
-                      className="absolute top-2 right-2 bg-white rounded-md p-1 shadow-sm w-6 h-6 flex items-center justify-center"
-                    >
-                      <i className="fas fa-times text-red-500"></i>
-                    </button>
-                  </div>
-                ))}
-                
-                {/* Display existing images when editing */}
-                {searchData?.images && searchData.images.map((image, index) => (
-                  <div key={`existing-${index}`} className="relative border border-slate-300 rounded-lg overflow-hidden h-48">
-                    <img 
-                      src={`/api/images/${image}`} 
-                      alt={`Existing ${index + 1}`} 
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 text-center">
-                      Bestaande afbeelding
+              
+              {/* Customer Selection */}
+              {user?.organizationId && (
+                <div className="px-4 py-3 sm:px-6 border-b border-slate-200 bg-slate-50">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-medium text-slate-700">Bestaande klant selecteren:</span>
+                    <div className="flex-1 flex-wrap flex gap-2">
+                      {isLoadingCustomers ? (
+                        <span className="text-sm text-slate-500">Klanten laden...</span>
+                      ) : customers.length === 0 ? (
+                        <span className="text-sm text-slate-500">Geen klanten gevonden</span>
+                      ) : (
+                        customers.map(customer => (
+                          <Button 
+                            key={customer.id}
+                            type="button"
+                            variant={selectedCustomer?.id === customer.id ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleSelectCustomer(customer)}
+                            className="text-xs"
+                          >
+                            {customer.firstName} {customer.lastName}
+                          </Button>
+                        ))
+                      )}
                     </div>
+                    <Button 
+                      type="button" 
+                      variant="secondary" 
+                      size="sm"
+                      onClick={() => setIsNewCustomerDialogOpen(true)}
+                    >
+                      + Nieuwe klant
+                    </Button>
                   </div>
-                ))}
+                </div>
+              )}
+              
+              <div className="px-4 py-5 sm:p-6">
+                <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                  <div className="sm:col-span-3">
+                    <FormField
+                      control={form.control}
+                      name="customerFirstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Voornaam</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="sm:col-span-3">
+                    <FormField
+                      control={form.control}
+                      name="customerLastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Achternaam</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="sm:col-span-3">
+                    <FormField
+                      control={form.control}
+                      name="customerEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="sm:col-span-3">
+                    <FormField
+                      control={form.control}
+                      name="customerPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Telefoonnummer</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Car Details Section */}
+            <div className="bg-white shadow sm:rounded-lg">
+              <div className="px-4 py-5 sm:px-6 border-b border-slate-200">
+                <h3 className="text-lg font-medium leading-6 text-slate-900">Auto Details</h3>
+                <p className="mt-1 text-sm text-slate-500">Specificeer de gewenste auto.</p>
+              </div>
+              <div className="px-4 py-5 sm:p-6">
+                <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                  <div className="sm:col-span-3">
+                    <FormField
+                      control={form.control}
+                      name="carMake"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Merk</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecteer merk" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {carMakes.map(make => (
+                                <SelectItem key={make} value={make}>{make}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="sm:col-span-3">
+                    <FormField
+                      control={form.control}
+                      name="carModel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Model</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Bijv. X5, A4, C-Klasse" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="sm:col-span-2">
+                    <FormField
+                      control={form.control}
+                      name="carType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Type</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecteer type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {carTypes.map(type => (
+                                <SelectItem key={type} value={type}>{type}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="sm:col-span-2">
+                    <FormField
+                      control={form.control}
+                      name="carYear"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bouwjaar</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Bijv. 2022 of 2020-2022" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="sm:col-span-2">
+                    <FormField
+                      control={form.control}
+                      name="carColor"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Kleur</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecteer kleur" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {carColors.map(color => (
+                                <SelectItem key={color} value={color}>{color}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="sm:col-span-3">
+                    <FormField
+                      control={form.control}
+                      name="carTransmission"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Transmissie</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecteer transmissie" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {transmissionTypes.map(type => (
+                                <SelectItem key={type} value={type}>{type}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="sm:col-span-3">
+                    <FormField
+                      control={form.control}
+                      name="carFuel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Brandstof</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecteer brandstof" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {fuelTypes.map(type => (
+                                <SelectItem key={type} value={type}>{type}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="sm:col-span-3">
+                    <FormField
+                      control={form.control}
+                      name="minPrice"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Minimale prijs (€)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="sm:col-span-3">
+                    <FormField
+                      control={form.control}
+                      name="maxPrice"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Maximale prijs (€)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="sm:col-span-6">
+                    <FormField
+                      control={form.control}
+                      name="additionalRequirements"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Aanvullende eisen</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              {...field} 
+                              rows={3}
+                              placeholder="Beschrijf eventuele specifieke wensen of eisen voor deze auto"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                          <p className="mt-2 text-sm text-slate-500">Beschrijf eventuele specifieke wensen of eisen voor deze auto.</p>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Status Section */}
+            <div className="bg-white shadow sm:rounded-lg">
+              <div className="px-4 py-5 sm:px-6 border-b border-slate-200">
+                <h3 className="text-lg font-medium leading-6 text-slate-900">Status</h3>
+                <p className="mt-1 text-sm text-slate-500">Pas de status van deze zoekopdracht aan.</p>
+              </div>
+              <div className="px-4 py-5 sm:p-6">
+                <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                  <div className="sm:col-span-3">
+                    <FormField
+                      control={form.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Status</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecteer status" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {searchStatuses.map(status => (
+                                <SelectItem key={status} value={status}>
+                                  {status === "active" ? "Actief" : 
+                                   status === "completed" ? "Afgerond" : 
+                                   status === "cancelled" ? "Geannuleerd" : status}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                          <p className="mt-2 text-sm text-slate-500">
+                            Actief: Zoekopdracht is lopend. Afgerond: Auto is gevonden. Geannuleerd: Zoektocht gestopt.
+                          </p>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Images Section */}
+            <div className="bg-white shadow sm:rounded-lg">
+              <div className="px-4 py-5 sm:px-6 border-b border-slate-200">
+                <h3 className="text-lg font-medium leading-6 text-slate-900">Foto's</h3>
+                <p className="mt-1 text-sm text-slate-500">Upload foto's van de gewenste auto.</p>
+              </div>
+              <div className="px-4 py-5 sm:p-6">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                  {/* Image Upload Button */}
+                  <label className="border-2 border-dashed border-slate-300 rounded-lg p-4 flex flex-col items-center justify-center h-40 cursor-pointer hover:border-secondary hover:bg-slate-50">
+                    <i className="fas fa-plus text-slate-400 text-2xl mb-2"></i>
+                    <span className="text-sm text-slate-500">Upload foto</span>
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      multiple
+                    />
+                  </label>
+                  
+                  {/* Display uploaded images */}
+                  {imageFiles.map((file, index) => (
+                    <div key={index} className="relative border border-slate-300 rounded-lg overflow-hidden h-40">
+                      <img 
+                        src={URL.createObjectURL(file)} 
+                        alt={`Uploaded ${index + 1}`} 
+                        className="w-full h-full object-cover"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => handleRemoveImage(index)}
+                        className="absolute top-2 right-2 bg-white rounded-md p-1 shadow-sm w-6 h-6 flex items-center justify-center"
+                      >
+                        <i className="fas fa-times text-red-500"></i>
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {/* Display existing images when editing */}
+                  {searchData?.images && searchData.images.map((image, index) => (
+                    <div key={`existing-${index}`} className="relative border border-slate-300 rounded-lg overflow-hidden h-40">
+                      <img 
+                        src={`/api/images/${image}`} 
+                        alt={`Existing ${index + 1}`} 
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 text-center">
+                        Bestaande afbeelding
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
           
-          {/* Save PDF button at bottom of form */}
-          <div className="flex justify-end mb-8 mt-6 px-4">
+          {/* Save buttons */}
+          <div className="flex justify-end bg-background py-4 border-t border-slate-200">
             <Button 
               type="button"
               variant="outline"
@@ -818,7 +833,7 @@ export function SearchForm({ searchId }: SearchFormProps) {
             >
               {downloadMutation.isPending ? (
                 <>
-                  <CarLoading type="car" size="sm" className="mr-2" />
+                  <CarLoading className="mr-2" />
                   <span>PDF genereren...</span>
                 </>
               ) : (
@@ -836,7 +851,7 @@ export function SearchForm({ searchId }: SearchFormProps) {
             >
               {mutation.isPending ? (
                 <>
-                  <CarLoading type="car" size="sm" className="mr-2" />
+                  <CarLoading className="mr-2" />
                   <span>Bezig met opslaan...</span>
                 </>
               ) : (
@@ -850,7 +865,7 @@ export function SearchForm({ searchId }: SearchFormProps) {
         </form>
       </Form>
       
-      {/* PDF Preview Modal */}
+      {/* Modals */}
       <PDFPreview 
         open={isPdfPreviewOpen} 
         onClose={() => setIsPdfPreviewOpen(false)} 
@@ -859,7 +874,6 @@ export function SearchForm({ searchId }: SearchFormProps) {
         isDownloading={downloadMutation.isPending}
       />
       
-      {/* Create New Customer Dialog */}
       <Dialog open={isNewCustomerDialogOpen} onOpenChange={setIsNewCustomerDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -1012,6 +1026,6 @@ export function SearchForm({ searchId }: SearchFormProps) {
           </Form>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

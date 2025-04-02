@@ -124,7 +124,7 @@ export function Sidebar() {
         <div className="flex flex-col items-center justify-center h-auto border-b border-slate-700 px-4 py-3">
           <div className="flex items-center space-x-2">
             <i className="fas fa-car-side text-accent"></i>
-            <span className="text-xl font-bold">CarSearch Pro</span>
+            <span className="text-xl font-bold">Flits Zoek</span>
           </div>
           {user?.organizationId && (
             <div className="mt-2 w-full">

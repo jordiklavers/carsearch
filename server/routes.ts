@@ -61,8 +61,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all searches for the current user
   app.get("/api/searches", isAuthenticated, async (req, res) => {
     try {
-      const searches = await storage.getSearchesByUserId(req.user!.id);
-      res.json(searches);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const offset = (page - 1) * limit;
+      
+      const [searches, total] = await Promise.all([
+        storage.getSearchesByUserId(req.user!.id, limit, offset),
+        storage.getSearchesCountByUserId(req.user!.id)
+      ]);
+      
+      res.json({
+        searches,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit)
+        }
+      });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

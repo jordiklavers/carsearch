@@ -17,7 +17,7 @@ import {
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import connectPg from "connect-pg-simple";
-import { eq, and, desc, isNull } from "drizzle-orm";
+import { eq, and, desc, isNull, sql } from "drizzle-orm";
 import { db } from "./db";
 
 const MemoryStore = createMemoryStore(session);
@@ -42,7 +42,8 @@ export interface IStorage {
   getOrganizationIdCounter(): number; // Get the current organization ID counter for iteration (not needed with database implementation)
   
   // Search operations
-  getSearchesByUserId(userId: number): Promise<Search[]>;
+  getSearchesByUserId(userId: number, limit: number, offset: number): Promise<Search[]>;
+  getSearchesCountByUserId(userId: number): Promise<number>;
   getSearchesByOrganizationId(organizationId: number): Promise<Search[]>;
   getSearchById(id: number): Promise<Search | undefined>;
   createSearch(search: Omit<Search, "id" | "createdAt" | "updatedAt">): Promise<Search>;
@@ -244,10 +245,15 @@ export class MemStorage implements IStorage {
   }
 
   // Search operations
-  async getSearchesByUserId(userId: number): Promise<Search[]> {
+  async getSearchesByUserId(userId: number, limit: number = 10, offset: number = 0): Promise<Search[]> {
     return Array.from(this.searches.values())
       .filter(search => search.userId === userId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(offset, offset + limit);
+  }
+
+  async getSearchesCountByUserId(userId: number): Promise<number> {
+    return Array.from(this.searches.values()).filter(search => search.userId === userId).length;
   }
 
   async getSearchesByOrganizationId(organizationId: number): Promise<Search[]> {
@@ -569,12 +575,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Search operations
-  async getSearchesByUserId(userId: number): Promise<Search[]> {
+  async getSearchesByUserId(userId: number, limit: number = 10, offset: number = 0): Promise<Search[]> {
     return db
       .select()
       .from(searches)
       .where(eq(searches.userId, userId))
-      .orderBy(desc(searches.createdAt));
+      .orderBy(desc(searches.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getSearchesCountByUserId(userId: number): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(searches)
+      .where(eq(searches.userId, userId));
+    
+    return result[0].count;
   }
 
   async getSearchesByOrganizationId(organizationId: number): Promise<Search[]> {

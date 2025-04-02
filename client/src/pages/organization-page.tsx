@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Organization, User } from "@shared/schema";
-import { Button } from "@/components/ui/button";
+import { Organization, User } from "../../shared/schema";
+import { Button } from "../components/ui/button";
 import {
   Card,
   CardContent,
@@ -47,53 +47,43 @@ export default function OrganizationPage() {
     queryKey: ["/api/organizations", user?.organizationId, "members"],
     queryFn: async () => {
       if (!user?.organizationId) return [];
-      const res = await fetch(
-        `/api/organizations/${user.organizationId}/members`,
-      );
+      const res = await fetch(`/api/organizations/${user.organizationId}/members`);
       if (!res.ok) throw new Error("Failed to load members");
       return await res.json();
     },
-    enabled: !!user?.organizationId && user?.role === "admin",
+    enabled: !!user?.organizationId,
   });
 
   // Organization update mutation
   const updateOrgMutation = useMutation({
-    mutationFn: async (updatedData: Partial<Organization>) => {
-      const res = await apiRequest(
-        "PATCH",
-        `/api/organizations/${organization?.id}`,
-        updatedData,
-      );
+    mutationFn: async (data: Partial<Organization>) => {
+      if (!organization?.id) throw new Error("No organization ID");
+      const res = await fetch(`/api/organizations/${organization.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update organization");
       return await res.json();
     },
-    onSuccess: (updatedOrg) => {
-      queryClient.setQueryData(
-        ["/api/organizations", user?.organizationId],
-        updatedOrg,
-      );
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/organizations", user?.organizationId],
+      });
       toast({
         title: "Organisatie bijgewerkt",
-        description: "De gegevens zijn succesvol opgeslagen.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Fout",
-        description:
-          error.message ||
-          "Er is een fout opgetreden bij het bijwerken van de organisatie.",
-        variant: "destructive",
+        description: "De organisatiegegevens zijn succesvol bijgewerkt.",
       });
     },
   });
 
   // Logo upload handler
-  const handleLogoUpload = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!logoFile || !organization) return;
+  const handleLogoUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!logoFile || !organization?.id) return;
 
+    setIsUploading(true);
     try {
-      setIsUploading(true);
       const formData = new FormData();
       formData.append("logo", logoFile);
 
@@ -102,22 +92,16 @@ export default function OrganizationPage() {
         body: formData,
       });
 
-      if (!res.ok) {
-        throw new Error("Failed to upload logo");
-      }
+      if (!res.ok) throw new Error("Failed to upload logo");
 
-      const data = await res.json();
-      queryClient.setQueryData(
-        ["/api/organizations", user?.organizationId],
-        data.organization,
-      );
+      queryClient.invalidateQueries({
+        queryKey: ["/api/organizations", user?.organizationId],
+      });
 
       toast({
         title: "Logo geüpload",
         description: "Het logo is succesvol geüpload.",
       });
-
-      setLogoFile(null);
     } catch (error) {
       toast({
         title: "Fout",
@@ -126,22 +110,17 @@ export default function OrganizationPage() {
       });
     } finally {
       setIsUploading(false);
+      setLogoFile(null);
     }
   };
 
   // Role update mutation
   const updateUserRoleMutation = useMutation({
-    mutationFn: async ({
-      userId,
-      role,
-    }: {
-      userId: number;
-      role: "admin" | "member";
-    }) => {
+    mutationFn: async ({ userId, role }: { userId: number; role: "admin" | "member" }) => {
       const res = await apiRequest("PATCH", `/api/users/${userId}/role`, {
         role,
       });
-      return await res.json();
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -149,26 +128,16 @@ export default function OrganizationPage() {
       });
       toast({
         title: "Rol bijgewerkt",
-        description: "De gebruikersrol is succesvol bijgewerkt.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Fout",
-        description:
-          error.message ||
-          "Er is een fout opgetreden bij het bijwerken van de rol.",
-        variant: "destructive",
+        description: "De rol is succesvol bijgewerkt.",
       });
     },
   });
 
   // General organization update handler
-  const handleGeneralSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-
-    const updatedData = {
+  const handleGeneralSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data = {
       name: formData.get("name") as string,
       address: formData.get("address") as string,
       city: formData.get("city") as string,
@@ -177,23 +146,20 @@ export default function OrganizationPage() {
       email: formData.get("email") as string,
       website: formData.get("website") as string,
     };
-
-    updateOrgMutation.mutate(updatedData);
+    updateOrgMutation.mutate(data);
   };
 
   // PDF styling update handler
-  const handlePdfSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-
-    const updatedData = {
+  const handlePdfSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data = {
       pdfPrimaryColor: formData.get("pdfPrimaryColor") as string,
       pdfSecondaryColor: formData.get("pdfSecondaryColor") as string,
       pdfCompanyName: formData.get("pdfCompanyName") as string,
       pdfContactInfo: formData.get("pdfContactInfo") as string,
     };
-
-    updateOrgMutation.mutate(updatedData);
+    updateOrgMutation.mutate(data);
   };
 
   // Role change handler
@@ -247,352 +213,312 @@ export default function OrganizationPage() {
                 Beheer de algemene gegevens van je organisatie.
               </CardDescription>
             </CardHeader>
-                  <CardContent>
-                    <form id="generalForm" onSubmit={handleGeneralSubmit}>
-                      <div className="grid gap-6 mb-6">
-                        <div className="grid gap-3">
-                          <Label htmlFor="name">Organisatie naam</Label>
-                          <Input
-                            id="name"
-                            name="name"
-                            defaultValue={organization?.name}
-                          />
-                        </div>
+            <CardContent>
+              <form id="generalForm" onSubmit={handleGeneralSubmit}>
+                <div className="grid gap-6 mb-6">
+                  <div className="grid gap-3">
+                    <Label htmlFor="name">Organisatie naam</Label>
+                    <Input
+                      id="name"
+                      name="name"
+                      defaultValue={organization?.name}
+                    />
+                  </div>
 
-                        <div className="grid gap-3">
-                          <Label htmlFor="address">Adres</Label>
-                          <Input
-                            id="address"
-                            name="address"
-                            defaultValue={organization?.address || ""}
-                          />
-                        </div>
+                  <div className="grid gap-3">
+                    <Label htmlFor="address">Adres</Label>
+                    <Input
+                      id="address"
+                      name="address"
+                      defaultValue={organization?.address || ""}
+                    />
+                  </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="grid gap-3">
-                            <Label htmlFor="city">Plaats</Label>
-                            <Input
-                              id="city"
-                              name="city"
-                              defaultValue={organization?.city || ""}
-                            />
-                          </div>
-                          <div className="grid gap-3">
-                            <Label htmlFor="zipCode">Postcode</Label>
-                            <Input
-                              id="zipCode"
-                              name="zipCode"
-                              defaultValue={organization?.zipCode || ""}
-                            />
-                          </div>
-                        </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-3">
+                      <Label htmlFor="city">Plaats</Label>
+                      <Input
+                        id="city"
+                        name="city"
+                        defaultValue={organization?.city || ""}
+                      />
+                    </div>
+                    <div className="grid gap-3">
+                      <Label htmlFor="zipCode">Postcode</Label>
+                      <Input
+                        id="zipCode"
+                        name="zipCode"
+                        defaultValue={organization?.zipCode || ""}
+                      />
+                    </div>
+                  </div>
 
-                        <div className="grid gap-3">
-                          <Label htmlFor="phone">Telefoonnummer</Label>
-                          <Input
-                            id="phone"
-                            name="phone"
-                            defaultValue={organization?.phone || ""}
-                          />
-                        </div>
+                  <div className="grid gap-3">
+                    <Label htmlFor="phone">Telefoonnummer</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      defaultValue={organization?.phone || ""}
+                    />
+                  </div>
 
-                        <div className="grid gap-3">
-                          <Label htmlFor="email">Email</Label>
-                          <Input
-                            id="email"
-                            name="email"
-                            type="email"
-                            defaultValue={organization?.email || ""}
-                          />
-                        </div>
+                  <div className="grid gap-3">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      defaultValue={organization?.email || ""}
+                    />
+                  </div>
 
-                        <div className="grid gap-3">
-                          <Label htmlFor="website">Website</Label>
-                          <Input
-                            id="website"
-                            name="website"
-                            defaultValue={organization?.website || ""}
-                          />
-                        </div>
-                      </div>
-                    </form>
-                  </CardContent>
-                  <CardFooter>
-                    <Button
-                      type="submit"
-                      form="generalForm"
-                      disabled={updateOrgMutation.isPending}
-                    >
-                      {updateOrgMutation.isPending ? (
-                        <span className="flex items-center">
-                          <span className="mr-2 h-4 w-4 animate-spin">⏳</span>
-                          Opslaan...
-                        </span>
-                      ) : (
-                        "Opslaan"
-                      )}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </TabsContent>
-
-              {/* Branding tab */}
-              <TabsContent value="branding">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Logo</CardTitle>
-                      <CardDescription>
-                        Upload het logo van je organisatie. Dit logo wordt ook
-                        gebruikt in PDF documenten.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="mb-4">
-                        {organization?.logo ? (
-                          <div className="w-40 h-40 border rounded-md flex items-center justify-center overflow-hidden">
-                            <img
-                              src={`/api/images/${organization.logo}`}
-                              alt="Organisatie logo"
-                              className="max-w-full max-h-full object-contain"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-40 h-40 bg-slate-100 rounded-md flex items-center justify-center">
-                            <p className="text-sm text-slate-500">Geen logo</p>
-                          </div>
-                        )}
-                      </div>
-
-                      <form onSubmit={handleLogoUpload} className="space-y-4">
-                        <div className="grid gap-3">
-                          <Label htmlFor="logo">Upload nieuw logo</Label>
-                          <Input
-                            id="logo"
-                            name="logo"
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                          />
-                        </div>
-
-                        <Button type="submit" disabled={!logoFile || isUploading}>
-                          {isUploading ? (
-                            <CarLoading size="sm" type="spinner" />
-                          ) : (
-                            "Logo uploaden"
-                          )}
-                        </Button>
-                      </form>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>PDF Styling</CardTitle>
-                      <CardDescription>
-                        Pas de visuele stijl van de gegenereerde PDF documenten aan.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <form id="pdfForm" onSubmit={handlePdfSubmit}>
-                        <div className="grid gap-6">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-3">
-                              <Label htmlFor="pdfPrimaryColor">Primaire kleur</Label>
-                              <div className="flex">
-                                <Input
-                                  id="pdfPrimaryColor"
-                                  name="pdfPrimaryColor"
-                                  defaultValue={
-                                    organization?.pdfPrimaryColor || "#4a6da7"
-                                  }
-                                  className="rounded-r-none"
-                                  type="color"
-                                />
-                                <div
-                                  className="w-10 border border-l-0 rounded-r-md"
-                                  style={{
-                                    backgroundColor:
-                                      organization?.pdfPrimaryColor || "#4a6da7",
-                                  }}
-                                />
-                              </div>
-                            </div>
-
-                            <div className="grid gap-3">
-                              <Label htmlFor="pdfSecondaryColor">
-                                Secundaire kleur
-                              </Label>
-                              <div className="flex">
-                                <Input
-                                  id="pdfSecondaryColor"
-                                  name="pdfSecondaryColor"
-                                  defaultValue={
-                                    organization?.pdfSecondaryColor || "#333333"
-                                  }
-                                  className="rounded-r-none"
-                                  type="color"
-                                />
-                                <div
-                                  className="w-10 border border-l-0 rounded-r-md"
-                                  style={{
-                                    backgroundColor:
-                                      organization?.pdfSecondaryColor || "#333333",
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid gap-3">
-                            <Label htmlFor="pdfCompanyName">
-                              Bedrijfsnaam in PDF
-                            </Label>
-                            <Input
-                              id="pdfCompanyName"
-                              name="pdfCompanyName"
-                              defaultValue={
-                                organization?.pdfCompanyName || "CarSearch Pro"
-                              }
-                            />
-                          </div>
-
-                          <div className="grid gap-3">
-                            <Label htmlFor="pdfContactInfo">
-                              Contactgegevens in PDF
-                            </Label>
-                            <Input
-                              id="pdfContactInfo"
-                              name="pdfContactInfo"
-                              defaultValue={organization?.pdfContactInfo || ""}
-                            />
-                          </div>
-                        </div>
-                      </form>
-                    </CardContent>
-                    <CardFooter>
-                      <Button
-                        type="submit"
-                        form="pdfForm"
-                        disabled={updateOrgMutation.isPending}
-                      >
-                        {updateOrgMutation.isPending ? (
-                          <CarLoading size="sm" type="spinner" text="Opslaan..." />
-                        ) : (
-                          "Opslaan"
-                        )}
-                      </Button>
-                    </CardFooter>
-                  </Card>
+                  <div className="grid gap-3">
+                    <Label htmlFor="website">Website</Label>
+                    <Input
+                      id="website"
+                      name="website"
+                      defaultValue={organization?.website || ""}
+                    />
+                  </div>
                 </div>
-              </TabsContent>
+              </form>
+            </CardContent>
+            <CardFooter>
+              <Button
+                type="submit"
+                form="generalForm"
+                disabled={updateOrgMutation.isPending}
+              >
+                {updateOrgMutation.isPending ? (
+                  <span className="flex items-center">
+                    <span className="mr-2 h-4 w-4 animate-spin">⏳</span>
+                    Opslaan...
+                  </span>
+                ) : (
+                  "Opslaan"
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
 
-              {/* Members tab - only visible for admins */}
-              {user?.role === "admin" && (
-                <TabsContent value="members">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Organisatieleden</CardTitle>
-                      <CardDescription>
-                        Beheer de gebruikers die toegang hebben tot deze organisatie.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {membersLoading ? (
-                        <CarLoading text="Leden laden..." />
-                      ) : (
-                        <div className="rounded-md border">
-                          <table className="w-full">
-                            <thead>
-                              <tr className="bg-slate-50 border-b">
-                                <th className="p-3 text-left font-medium text-sm">
-                                  Naam
-                                </th>
-                                <th className="p-3 text-left font-medium text-sm">
-                                  Email
-                                </th>
-                                <th className="p-3 text-left font-medium text-sm">
-                                  Rol
-                                </th>
-                                <th className="p-3 text-left font-medium text-sm">
-                                  Beheer
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {members && members.length > 0 ? (
-                                members.map((member: User) => (
-                                  <tr key={member.id} className="border-b">
-                                    <td className="p-3 text-sm">
-                                      {member.firstName} {member.lastName}
-                                      {member.id === user.id && (
-                                        <span className="text-xs text-slate-500 ml-1">
-                                          (jij)
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="p-3 text-sm">{member.email}</td>
-                                    <td className="p-3 text-sm capitalize">
-                                      {member.role}
-                                    </td>
-                                    <td className="p-3">
-                                      {member.id !== user.id && (
-                                        <div className="flex space-x-2">
-                                          {member.role === "member" ? (
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={() =>
-                                                handleRoleChange(member.id, "admin")
-                                              }
-                                              disabled={
-                                                updateUserRoleMutation.isPending
-                                              }
-                                            >
-                                              Maak admin
-                                            </Button>
-                                          ) : (
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={() =>
-                                                handleRoleChange(member.id, "member")
-                                              }
-                                              disabled={
-                                                updateUserRoleMutation.isPending
-                                              }
-                                            >
-                                              Maak lid
-                                            </Button>
-                                          )}
-                                        </div>
-                                      )}
-                                    </td>
-                                  </tr>
-                                ))
-                              ) : (
-                                <tr>
-                                  <td
-                                    colSpan={4}
-                                    className="p-4 text-center text-sm text-slate-500"
-                                  >
-                                    Geen leden gevonden
-                                  </td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
+        {/* Branding tab */}
+        <TabsContent value="branding">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Logo</CardTitle>
+                <CardDescription>
+                  Upload het logo van je organisatie. Dit logo wordt ook
+                  gebruikt in PDF documenten.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4">
+                  {organization?.logo ? (
+                    <div className="w-40 h-40 border rounded-md flex items-center justify-center overflow-hidden">
+                      <img
+                        src={`/api/images/${organization.logo}`}
+                        alt="Organisatie logo"
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-40 h-40 bg-slate-100 rounded-md flex items-center justify-center">
+                      <p className="text-sm text-slate-500">Geen logo</p>
+                    </div>
+                  )}
+                </div>
+
+                <form onSubmit={handleLogoUpload} className="space-y-4">
+                  <div className="grid gap-3">
+                    <Label htmlFor="logo">Upload nieuw logo</Label>
+                    <Input
+                      id="logo"
+                      name="logo"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                    />
+                  </div>
+
+                  <Button type="submit" disabled={!logoFile || isUploading}>
+                    {isUploading ? (
+                      <CarLoading text="Uploaden..." />
+                    ) : (
+                      "Logo uploaden"
+                    )}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>PDF Styling</CardTitle>
+                <CardDescription>
+                  Pas de visuele stijl van de gegenereerde PDF documenten aan.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form id="pdfForm" onSubmit={handlePdfSubmit}>
+                  <div className="grid gap-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-3">
+                        <Label htmlFor="pdfPrimaryColor">Primaire kleur</Label>
+                        <div className="flex">
+                          <Input
+                            id="pdfPrimaryColor"
+                            name="pdfPrimaryColor"
+                            defaultValue={organization?.pdfPrimaryColor || "#4a6da7"}
+                            className="rounded-r-none"
+                            type="color"
+                          />
+                          <div
+                            className="w-10 border border-l-0 rounded-r-md"
+                            style={{
+                              backgroundColor: organization?.pdfPrimaryColor || "#4a6da7",
+                            }}
+                          />
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              )}
-            </Tabs>
+                      </div>
+
+                      <div className="grid gap-3">
+                        <Label htmlFor="pdfSecondaryColor">Secundaire kleur</Label>
+                        <div className="flex">
+                          <Input
+                            id="pdfSecondaryColor"
+                            name="pdfSecondaryColor"
+                            defaultValue={organization?.pdfSecondaryColor || "#333333"}
+                            className="rounded-r-none"
+                            type="color"
+                          />
+                          <div
+                            className="w-10 border border-l-0 rounded-r-md"
+                            style={{
+                              backgroundColor: organization?.pdfSecondaryColor || "#333333",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3">
+                      <Label htmlFor="pdfCompanyName">Bedrijfsnaam in PDF</Label>
+                      <Input
+                        id="pdfCompanyName"
+                        name="pdfCompanyName"
+                        defaultValue={organization?.pdfCompanyName || "CarSearch Pro"}
+                      />
+                    </div>
+
+                    <div className="grid gap-3">
+                      <Label htmlFor="pdfContactInfo">Contactgegevens in PDF</Label>
+                      <Input
+                        id="pdfContactInfo"
+                        name="pdfContactInfo"
+                        defaultValue={organization?.pdfContactInfo || ""}
+                      />
+                    </div>
+                  </div>
+                </form>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  type="submit"
+                  form="pdfForm"
+                  disabled={updateOrgMutation.isPending}
+                >
+                  {updateOrgMutation.isPending ? (
+                    <CarLoading text="Opslaan..." />
+                  ) : (
+                    "Opslaan"
+                  )}
+                </Button>
+              </CardFooter>
+            </Card>
           </div>
-        </main>
-      </div>
+        </TabsContent>
+
+        {/* Members tab - only visible for admins */}
+        {user?.role === "admin" && (
+          <TabsContent value="members">
+            <Card>
+              <CardHeader>
+                <CardTitle>Organisatieleden</CardTitle>
+                <CardDescription>
+                  Beheer de gebruikers die toegang hebben tot deze organisatie.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {membersLoading ? (
+                  <CarLoading text="Leden laden..." />
+                ) : (
+                  <div className="rounded-md border">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-slate-50 border-b">
+                          <th className="p-3 text-left font-medium text-sm">Naam</th>
+                          <th className="p-3 text-left font-medium text-sm">Email</th>
+                          <th className="p-3 text-left font-medium text-sm">Rol</th>
+                          <th className="p-3 text-left font-medium text-sm">Beheer</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {members && members.length > 0 ? (
+                          members.map((member: User) => (
+                            <tr key={member.id} className="border-b">
+                              <td className="p-3 text-sm">
+                                {member.firstName} {member.lastName}
+                                {member.id === user.id && (
+                                  <span className="text-xs text-slate-500 ml-1">(jij)</span>
+                                )}
+                              </td>
+                              <td className="p-3 text-sm">{member.email}</td>
+                              <td className="p-3 text-sm capitalize">{member.role}</td>
+                              <td className="p-3">
+                                {member.id !== user.id && (
+                                  <div className="flex space-x-2">
+                                    {member.role === "member" ? (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleRoleChange(member.id, "admin")}
+                                        disabled={updateUserRoleMutation.isPending}
+                                      >
+                                        Maak admin
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleRoleChange(member.id, "member")}
+                                        disabled={updateUserRoleMutation.isPending}
+                                      >
+                                        Maak lid
+                                      </Button>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={4} className="p-4 text-center text-sm text-slate-500">
+                              Geen leden gevonden
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
-}
+} 
