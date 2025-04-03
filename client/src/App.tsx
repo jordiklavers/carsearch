@@ -40,37 +40,43 @@ const ProtectedLayout = ({ Component }: { Component: React.ComponentType }) => {
 function Router() {
   return (
     <Switch>
-      <ProtectedRoute 
-        path="/" 
-        component={() => <ProtectedLayout Component={DashboardPage} />} 
-      />
-      <ProtectedRoute 
-        path="/search/new" 
-        component={() => <ProtectedLayout Component={SearchFormPage} />} 
-      />
-      <ProtectedRoute 
-        path="/search/edit/:id" 
-        component={() => <ProtectedLayout Component={SearchFormPage} />} 
-      />
-      <ProtectedRoute 
-        path="/history" 
-        component={() => <ProtectedLayout Component={SearchHistoryPage} />} 
-      />
-      <ProtectedRoute 
-        path="/profile" 
-        component={() => <ProtectedLayout Component={ProfilePage} />} 
-      />
-      <ProtectedRoute 
-        path="/organization" 
-        component={() => <ProtectedLayout Component={OrganizationPage} />} 
-      />
-      <ProtectedRoute 
-        path="/customers" 
-        component={() => <ProtectedLayout Component={CustomersPage} />} 
-      />
       <Route path="/auth" component={AuthPage} />
       <Route path="/admin-dev" component={AdminDevPage} />
-      <Route component={NotFound} />
+      <Route>
+        <AppLayout>
+          <Switch>
+            <ProtectedRoute 
+              path="/" 
+              component={() => <Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} 
+            />
+            <ProtectedRoute 
+              path="/search/new" 
+              component={() => <Suspense fallback={<PageLoader />}><SearchFormPage /></Suspense>} 
+            />
+            <ProtectedRoute 
+              path="/search/edit/:id" 
+              component={() => <Suspense fallback={<PageLoader />}><SearchFormPage /></Suspense>} 
+            />
+            <ProtectedRoute 
+              path="/history" 
+              component={() => <Suspense fallback={<PageLoader />}><SearchHistoryPage /></Suspense>} 
+            />
+            <ProtectedRoute 
+              path="/profile" 
+              component={() => <Suspense fallback={<PageLoader />}><ProfilePage /></Suspense>} 
+            />
+            <ProtectedRoute 
+              path="/organization" 
+              component={() => <Suspense fallback={<PageLoader />}><OrganizationPage /></Suspense>} 
+            />
+            <ProtectedRoute 
+              path="/customers" 
+              component={() => <Suspense fallback={<PageLoader />}><CustomersPage /></Suspense>} 
+            />
+            <Route component={NotFound} />
+          </Switch>
+        </AppLayout>
+      </Route>
     </Switch>
   );
 }

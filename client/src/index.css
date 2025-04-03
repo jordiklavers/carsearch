@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap');
 @layer base {
   * {
     @apply border-border;
@@ -9,7 +10,7 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: 'Figtree', system-ui, sans-serif;
   }
   :root {
     --background: 0 0% 100%;
@@ -79,10 +80,6 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  h1, h2, h3, h4, h5 {
-    @apply font-heading;
   }
 }
 

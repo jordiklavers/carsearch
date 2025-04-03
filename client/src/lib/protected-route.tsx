@@ -31,7 +31,7 @@ export function ProtectedRoute({
 
   return (
     <Route path={path}>
-      <Component />
+      {Component()}
     </Route>
   );
 }

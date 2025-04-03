@@ -49,13 +49,13 @@ export function NavProjects({
                 location === item.url && "bg-primary/10 hover:bg-primary/15"
               )}
             >
-              <Link href={item.url}>
+              <Link href={item.url} className="py-5 font-medium">
                 <item.icon className={cn(
-                  "mr-2",
+                
                   location === item.url ? "text-primary" : "text-muted-foreground"
                 )} />
                 <span className={cn(
-                  location === item.url ? "text-primary font-medium" : "text-muted-foreground"
+                  location === item.url ? "text-primary font-bold" : "text-muted-foreground"
                 )}>{item.name}</span>
               </Link>
             </SidebarMenuButton>
