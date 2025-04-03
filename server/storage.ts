@@ -45,6 +45,7 @@ export interface IStorage {
   getSearchesByUserId(userId: number, limit: number, offset: number): Promise<Search[]>;
   getSearchesCountByUserId(userId: number): Promise<number>;
   getSearchesByOrganizationId(organizationId: number): Promise<Search[]>;
+  getSearchesByCustomerId(customerId: number): Promise<Search[]>;
   getSearchById(id: number): Promise<Search | undefined>;
   createSearch(search: Omit<Search, "id" | "createdAt" | "updatedAt">): Promise<Search>;
   updateSearch(id: number, search: Omit<Search, "id" | "createdAt" | "updatedAt">): Promise<Search>;
@@ -265,6 +266,11 @@ export class MemStorage implements IStorage {
     return Array.from(this.searches.values())
       .filter(search => orgUserIds.includes(search.userId))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getSearchesByCustomerId(customerId: number): Promise<Search[]> {
+    return Array.from(this.searches.values())
+      .filter(search => search.customerId === customerId);
   }
 
   async getSearchById(id: number): Promise<Search | undefined> {
@@ -609,6 +615,32 @@ export class DatabaseStorage implements IStorage {
       .from(searches)
       .where(users => 
         orgUserIds.map(id => eq(searches.userId, id)).reduce((a, b) => a || b)
+      )
+      .orderBy(desc(searches.createdAt));
+  }
+
+  async getSearchesByCustomerId(customerId: number): Promise<Search[]> {
+    return db
+      .select()
+      .from(searches)
+      .where(
+        and(
+          eq(searches.customerEmail, 
+            db.select({ email: customers.email })
+              .from(customers)
+              .where(eq(customers.id, customerId))
+          ),
+          eq(searches.customerFirstName,
+            db.select({ firstName: customers.firstName })
+              .from(customers)
+              .where(eq(customers.id, customerId))
+          ),
+          eq(searches.customerLastName,
+            db.select({ lastName: customers.lastName })
+              .from(customers)
+              .where(eq(customers.id, customerId))
+          )
+        )
       )
       .orderBy(desc(searches.createdAt));
   }

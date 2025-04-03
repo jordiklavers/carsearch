@@ -50,7 +50,8 @@ export function Header({ toggleMobileMenu }: HeaderProps) {
             type="submit" 
             variant="ghost" 
             size="sm" 
-            className="absolute inset-y-0 right-0 px-3"
+            className="absolute inset-y-0 right-0 flex items-center px-3 py-1 transform translate-y-1
+            -translate-x-1"
           >
             Zoek
           </Button>

@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Customer, InsertCustomer, insertCustomerSchema } from "@shared/schema";
+import { Customer, InsertCustomer, insertCustomerSchema, Search } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import React from "react";
 
 import {
   Table,
@@ -77,6 +78,8 @@ export default function CustomersPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+  const [customerSearches, setCustomerSearches] = useState<Record<number, Search[]>>({});
 
   // Fetch customers
   const { data: customers, isLoading } = useQuery<Customer[]>({
@@ -229,6 +232,25 @@ export default function CustomersPage() {
     deleteCustomerMutation.mutate(id);
   };
 
+  // Fetch searches for a customer
+  const fetchCustomerSearches = async (customerId: number) => {
+    try {
+      const res = await apiRequest("GET", `/api/customers/${customerId}/searches`);
+      const searches = await res.json();
+      setCustomerSearches(prev => ({ ...prev, [customerId]: searches }));
+    } catch (error) {
+      console.error("Error fetching customer searches:", error);
+    }
+  };
+
+  // Handle customer row click
+  const handleCustomerClick = (customerId: number) => {
+    setSelectedCustomerId(prev => prev === customerId ? null : customerId);
+    if (!customerSearches[customerId]) {
+      fetchCustomerSearches(customerId);
+    }
+  };
+
   // No organization warning
   if (!user?.organizationId) {
     return (
@@ -277,102 +299,167 @@ export default function CustomersPage() {
               <TableBody>
                 {customers && customers.length > 0 ? (
                   customers.map((customer) => (
-                    <TableRow key={customer.id}>
-                      <TableCell className="font-medium">
-                        {customer.firstName} {customer.lastName}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <div className="flex items-center text-sm">
-                            <Mail className="h-3 w-3 mr-2 text-slate-400" />
-                            <a
-                              href={`mailto:${customer.email}`}
-                              className="text-blue-600 hover:underline"
-                            >
-                              {customer.email}
-                            </a>
+                    <React.Fragment key={customer.id}>
+                      <TableRow 
+                        className="cursor-pointer hover:bg-slate-50"
+                        onClick={() => handleCustomerClick(customer.id)}
+                      >
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <i className={`fas fa-chevron-${selectedCustomerId === customer.id ? 'down' : 'right'} text-slate-400`} />
+                            {customer.firstName} {customer.lastName}
                           </div>
-                          {customer.phone && (
-                            <div className="flex items-center text-sm mt-1">
-                              <Phone className="h-3 w-3 mr-2 text-slate-400" />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <div className="flex items-center text-sm">
+                              <Mail className="h-3 w-3 mr-2 text-slate-400" />
                               <a
-                                href={`tel:${customer.phone}`}
+                                href={`mailto:${customer.email}`}
                                 className="text-blue-600 hover:underline"
+                                onClick={(e) => e.stopPropagation()}
                               >
-                                {customer.phone}
+                                {customer.email}
                               </a>
                             </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {customer.address && customer.city ? (
-                          <>
-                            {customer.address}, {customer.zipCode || ""} {customer.city}
-                          </>
-                        ) : (
-                          <span className="text-slate-400 text-sm italic">
-                            Geen adres
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <span className="text-sm">{format(customer.createdAt, 'dd-MM-yyyy')}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleOpenEditDialog(customer)}
+                            {customer.phone && (
+                              <div className="flex items-center text-sm mt-1">
+                                <Phone className="h-3 w-3 mr-2 text-slate-400" />
+                                <a
+                                  href={`tel:${customer.phone}`}
+                                  className="text-blue-600 hover:underline"
+                                  onClick={(e) => e.stopPropagation()}
                                 >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Bewerk klant</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-
-                          {/* Delete Customer */}
-                          {user.role === "admin" && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <Trash2 className="h-4 w-4 text-red-500" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>
-                                    Weet u zeker dat u deze klant wilt verwijderen?
-                                  </AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Deze actie kan niet ongedaan worden gemaakt. Dit verwijdert
-                                    de klant permanent uit uw systeem.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDeleteCustomer(customer.id)}
-                                    className="bg-red-500 hover:bg-red-600"
-                                  >
-                                    Verwijderen
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                                  {customer.phone}
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {customer.address && customer.city ? (
+                            <>
+                              {customer.address}, {customer.zipCode || ""} {customer.city}
+                            </>
+                          ) : (
+                            <span className="text-slate-400 text-sm italic">
+                              Geen adres
+                            </span>
                           )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <span className="text-sm">{format(customer.createdAt, 'dd-MM-yyyy')}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end space-x-2">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenEditDialog(customer);
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Bewerk klant</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+
+                            {/* Delete Customer */}
+                            {user.role === "admin" && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Weet u zeker dat u deze klant wilt verwijderen?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Deze actie kan niet ongedaan worden gemaakt. Dit verwijdert
+                                      de klant permanent uit uw systeem.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteCustomer(customer.id)}
+                                      className="bg-red-500 hover:bg-red-600"
+                                    >
+                                      Verwijderen
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {selectedCustomerId === customer.id && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="bg-slate-50">
+                            <div className="py-4">
+                              <h4 className="text-sm font-medium text-slate-900 mb-4">Zoekopdrachten</h4>
+                              {customerSearches[customer.id] ? (
+                                customerSearches[customer.id].length > 0 ? (
+                                  <div className="space-y-4">
+                                    {customerSearches[customer.id].map((search) => (
+                                      <div 
+                                        key={search.id}
+                                        className="bg-white p-4 rounded-lg shadow-sm border border-slate-200"
+                                      >
+                                        <div className="flex items-center justify-between">
+                                          <div>
+                                            <h5 className="text-sm font-medium text-slate-900">
+                                              {search.carMake} {search.carModel}
+                                            </h5>
+                                            <p className="text-sm text-slate-500">
+                                              {search.carType} • {search.carYear} • {search.carColor}
+                                            </p>
+                                          </div>
+                                          <Badge variant={search.status === "active" ? "default" : "secondary"}>
+                                            {search.status === "active" ? "Actief" : "Afgerond"}
+                                          </Badge>
+                                        </div>
+                                        <div className="mt-2 text-sm text-slate-500">
+                                          <p>Prijs: €{search.minPrice.toLocaleString()} - €{search.maxPrice.toLocaleString()}</p>
+                                          <p>Transmissie: {search.carTransmission}</p>
+                                          <p>Brandstof: {search.carFuel}</p>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-slate-500 italic">
+                                    Geen zoekopdrachten gevonden voor deze klant.
+                                  </p>
+                                )
+                              ) : (
+                                <div className="flex items-center justify-center py-4">
+                                  <CarLoading text="Zoekopdrachten laden..." />
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
                   ))
                 ) : (
                   <TableRow>

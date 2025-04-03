@@ -23,6 +23,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { cn } from "@/lib/utils"
 
 export function NavProjects({
   projects,
@@ -42,10 +43,20 @@ export function NavProjects({
       <SidebarMenu>
         {projects.map((item) => (
           <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton asChild>
+            <SidebarMenuButton 
+              asChild
+              className={cn(
+                location === item.url && "bg-primary/10 hover:bg-primary/15"
+              )}
+            >
               <Link href={item.url}>
-                <item.icon className="mr-2" />
-                <span>{item.name}</span>
+                <item.icon className={cn(
+                  "mr-2",
+                  location === item.url ? "text-primary" : "text-muted-foreground"
+                )} />
+                <span className={cn(
+                  location === item.url ? "text-primary font-medium" : "text-muted-foreground"
+                )}>{item.name}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

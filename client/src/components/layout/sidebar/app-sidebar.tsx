@@ -71,26 +71,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }] : [])
   ];
 
-  const userData = user ? {
-    name: `${user.firstName} ${user.lastName}`,
-    email: user.email,
-    avatar: user.profilePicture ? `/api/images/${user.profilePicture}` : undefined,
-  } : null;
-
-  if (!userData) return null;
+  if (!user) return null;
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={teams} isLoading={isLoadingOrg} />
+        {isLoadingOrg ? (
+          <div className="flex items-center justify-center h-12">
+            <div className="h-4 w-32 bg-slate-200 rounded animate-pulse" />
+          </div>
+        ) : (
+          <TeamSwitcher teams={teams} />
+        )}
       </SidebarHeader>
       <SidebarContent>
         <NavProjects projects={projects} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={userData} />
+        <NavUser user={{
+          name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.username,
+          email: user.email,
+          avatar: user.profilePicture ? `/api/images/${user.profilePicture}` : undefined,
+        }} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

@@ -46,6 +46,7 @@ import {
 import { uploadImages } from "@/lib/file-upload";
 import { PDFPreview } from "@/components/pdf/pdf-preview";
 import { generatePDF } from "@/lib/pdf-generator";
+import { CustomerSelectModal } from "@/components/search/customer-select-modal";
 
 interface SearchFormProps {
   searchId?: string;
@@ -61,6 +62,7 @@ export function SearchForm({ searchId }: SearchFormProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isNewCustomerDialogOpen, setIsNewCustomerDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [isCustomerSelectModalOpen, setIsCustomerSelectModalOpen] = useState(false);
 
   // Fetch search data if editing
   const { data: searchData, isLoading: isLoadingSearch } = useQuery<Search>({
@@ -361,36 +363,53 @@ export function SearchForm({ searchId }: SearchFormProps) {
               {/* Customer Selection */}
               {user?.organizationId && (
                 <div className="px-4 py-3 sm:px-6 border-b border-slate-200 bg-slate-50">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-medium text-slate-700">Bestaande klant selecteren:</span>
-                    <div className="flex-1 flex-wrap flex gap-2">
-                      {isLoadingCustomers ? (
-                        <span className="text-sm text-slate-500">Klanten laden...</span>
-                      ) : customers.length === 0 ? (
-                        <span className="text-sm text-slate-500">Geen klanten gevonden</span>
-                      ) : (
-                        customers.map(customer => (
-                          <Button 
-                            key={customer.id}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-slate-700">Bestaande klant:</span>
+                      {selectedCustomer ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-slate-900">
+                            {selectedCustomer.firstName} {selectedCustomer.lastName}
+                          </span>
+                          <Button
                             type="button"
-                            variant={selectedCustomer?.id === customer.id ? "default" : "outline"}
+                            variant="ghost"
                             size="sm"
-                            onClick={() => handleSelectCustomer(customer)}
-                            className="text-xs"
+                            onClick={() => {
+                              setSelectedCustomer(null);
+                              form.setValue("customerFirstName", "");
+                              form.setValue("customerLastName", "");
+                              form.setValue("customerEmail", "");
+                              form.setValue("customerPhone", "");
+                            }}
                           >
-                            {customer.firstName} {customer.lastName}
+                            <i className="fas fa-times text-slate-400 hover:text-slate-600" />
                           </Button>
-                        ))
+                        </div>
+                      ) : (
+                        <span className="text-sm text-slate-500">Geen klant geselecteerd</span>
                       )}
                     </div>
-                    <Button 
-                      type="button" 
-                      variant="secondary" 
-                      size="sm"
-                      onClick={() => setIsNewCustomerDialogOpen(true)}
-                    >
-                      + Nieuwe klant
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsCustomerSelectModalOpen(true)}
+                      >
+                        <i className="fas fa-search mr-2" />
+                        Klant zoeken
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        onClick={() => setIsNewCustomerDialogOpen(true)}
+                      >
+                        <i className="fas fa-plus mr-2" />
+                        Nieuwe klant
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1026,6 +1045,13 @@ export function SearchForm({ searchId }: SearchFormProps) {
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Add CustomerSelectModal */}
+      <CustomerSelectModal
+        isOpen={isCustomerSelectModalOpen}
+        onClose={() => setIsCustomerSelectModalOpen(false)}
+        onSelect={handleSelectCustomer}
+      />
     </div>
   );
 }

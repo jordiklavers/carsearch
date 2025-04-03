@@ -728,6 +728,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: error.message });
     }
   });
+
+  // Get searches for a customer
+  app.get("/api/customers/:id/searches", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const customer = await storage.getCustomerById(id);
+      
+      if (!customer) {
+        return res.status(404).json({ message: "Klant niet gevonden" });
+      }
+      
+      // Check if user belongs to the same organization as the customer
+      if (req.user!.organizationId !== customer.organizationId) {
+        return res.status(403).json({ message: "Geen toegang tot deze klant" });
+      }
+      
+      const searches = await storage.getSearchesByCustomerId(id);
+      res.json(searches);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
   
   // Get a customer by ID
   app.get("/api/customers/:id", isAuthenticated, async (req, res) => {
