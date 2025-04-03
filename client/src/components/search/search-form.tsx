@@ -315,7 +315,7 @@ export function SearchForm({ searchId }: SearchFormProps) {
   return (
     <div className="flex flex-col min-h-0">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-slate-900">
+        <h1 className="text-2xl font-bold text-slate-900">
           {searchId ? "Zoekopdracht Bewerken" : "Nieuwe Zoekopdracht"}
         </h1>
         
@@ -354,7 +354,7 @@ export function SearchForm({ searchId }: SearchFormProps) {
             {/* Customer Details Section */}
             <div className="bg-white shadow sm:rounded-lg">
               <div className="px-4 py-5 sm:px-6 border-b border-slate-200">
-                <h3 className="text-lg font-medium leading-6 text-slate-900">Klantgegevens</h3>
+                <h3 className="text-lg font-bold leading-6 text-slate-900">Klantgegevens</h3>
                 <p className="mt-1 text-sm text-slate-500">
                   Vul de gegevens van de klant in of selecteer een bestaande klant.
                 </p>
@@ -365,7 +365,7 @@ export function SearchForm({ searchId }: SearchFormProps) {
                 <div className="px-4 py-3 sm:px-6 border-b border-slate-200 bg-slate-50">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-slate-700">Bestaande klant:</span>
+                      <span className="text-sm font-semibold text-slate-700">Bestaande klant:</span>
                       {selectedCustomer ? (
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-slate-900">
@@ -387,7 +387,7 @@ export function SearchForm({ searchId }: SearchFormProps) {
                           </Button>
                         </div>
                       ) : (
-                        <span className="text-sm text-slate-500">Geen klant geselecteerd</span>
+                        <span className="text-sm font-medium text-slate-500">Geen klant geselecteerd</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
@@ -486,7 +486,7 @@ export function SearchForm({ searchId }: SearchFormProps) {
             {/* Car Details Section */}
             <div className="bg-white shadow sm:rounded-lg">
               <div className="px-4 py-5 sm:px-6 border-b border-slate-200">
-                <h3 className="text-lg font-medium leading-6 text-slate-900">Auto Details</h3>
+                <h3 className="text-lg font-bold leading-6 text-slate-900">Auto Details</h3>
                 <p className="mt-1 text-sm text-slate-500">Specificeer de gewenste auto.</p>
               </div>
               <div className="px-4 py-5 sm:p-6">
@@ -730,7 +730,7 @@ export function SearchForm({ searchId }: SearchFormProps) {
             {/* Status Section */}
             <div className="bg-white shadow sm:rounded-lg">
               <div className="px-4 py-5 sm:px-6 border-b border-slate-200">
-                <h3 className="text-lg font-medium leading-6 text-slate-900">Status</h3>
+                <h3 className="text-lg font-bold leading-6 text-slate-900">Status</h3>
                 <p className="mt-1 text-sm text-slate-500">Pas de status van deze zoekopdracht aan.</p>
               </div>
               <div className="px-4 py-5 sm:p-6">
@@ -776,7 +776,7 @@ export function SearchForm({ searchId }: SearchFormProps) {
             {/* Images Section */}
             <div className="bg-white shadow sm:rounded-lg">
               <div className="px-4 py-5 sm:px-6 border-b border-slate-200">
-                <h3 className="text-lg font-medium leading-6 text-slate-900">Foto's</h3>
+                <h3 className="text-lg font-bold leading-6 text-slate-900">Foto's</h3>
                 <p className="mt-1 text-sm text-slate-500">Upload foto's van de gewenste auto.</p>
               </div>
               <div className="px-4 py-5 sm:p-6">

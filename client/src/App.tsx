@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import AdminDevPage from "@/pages/admin-dev-page";
+import DebugPage from "@/pages/debug-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/layout/app-layout";
@@ -42,6 +43,7 @@ function Router() {
     <Switch>
       <Route path="/auth" component={AuthPage} />
       <Route path="/admin-dev" component={AdminDevPage} />
+      <Route path="/debug" component={DebugPage} />
       <Route>
         <AppLayout>
           <Switch>
